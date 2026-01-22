@@ -16,7 +16,27 @@ import typing as typ
 
 import psutil
 
-DEFAULT_CONFIG = {
+
+class Config(typ.TypedDict):
+    blocked_apps: list[str]
+    check_interval: float
+
+
+def is_config(x: object) -> typ.TypeGuard[Config]:
+    if not isinstance(x, dict):
+        return False
+    if set(x) != {"blocked_apps", "check_interval"}:
+        return False
+    if not isinstance(bas := x["blocked_apps"], list) and all(
+        isinstance(ba, str) for ba in bas
+    ):
+        return False
+    if not isinstance(x["check_interval"], float):
+        return False
+    return True
+
+
+DEFAULT_CONFIG: Config = {
     "blocked_apps": ["discord", "slack", "steam", "brave", "brave-browser", "firefox"],
     "check_interval": 0.5,
 }
@@ -74,18 +94,12 @@ class AppBlocker:
         else:
             with open(CONFIG_PATH, "r", encoding="utf-8") as f:
                 config = json.load(f)
+                assert is_config(config)
 
-        if on_init:
-            self.blocked_apps: set[str] = {
-                x.lower() for x in typ.cast(list[str], config["blocked_apps"])
-            }
-            self.check_interval: float = config["check_interval"]
-        else:
-            new_blocked_apps: set[str] = {
-                x.lower() for x in typ.cast(list[str], config["blocked_apps"])
-            }
-            new_check_interval: float = config["check_interval"]
+        new_blocked_apps = {x.lower() for x in config["blocked_apps"]}
+        new_check_interval = config["check_interval"]
 
+        if not on_init:
             # Check for changes in blocked apps
             if new_blocked_apps != self.blocked_apps:
                 added = new_blocked_apps - self.blocked_apps
@@ -96,8 +110,6 @@ class AppBlocker:
                 for app in removed:
                     logger.info("Removed from blocked apps: %s", f"{app!r}")
 
-                self.blocked_apps = new_blocked_apps
-
             # Check for changes in check interval
             if new_check_interval != self.check_interval:
                 logger.info(
@@ -105,7 +117,9 @@ class AppBlocker:
                     self.check_interval,
                     new_check_interval,
                 )
-                self.check_interval = new_check_interval
+
+        self.blocked_apps = new_blocked_apps
+        self.check_interval = new_check_interval
 
         logger.info(
             "Config loaded. Apps: %s, Interval: %fs",
