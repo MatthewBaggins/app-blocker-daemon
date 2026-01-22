@@ -133,7 +133,7 @@ def main() -> None:
     logger.info("Logs: %s", LOGS_DIR / "daemon.log")
 
     # Handle graceful shutdown
-    running = True
+    running: bool = True
 
     def _shutdown(_sig, _frame) -> None:
         nonlocal running
@@ -143,7 +143,7 @@ def main() -> None:
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
 
-    last_mtime = 0
+    last_mtime: float = 0
     app_blocker = AppBlocker()
 
     while running:
