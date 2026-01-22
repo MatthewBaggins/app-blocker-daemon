@@ -1,7 +1,7 @@
 cat > config.json << 'EOF'
 {
   "blocked_apps": [
-    "Discord",
+    "discord",
     "slack",
     "steam",
     "brave",

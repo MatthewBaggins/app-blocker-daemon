@@ -12,11 +12,12 @@ from logging.handlers import RotatingFileHandler
 import pathlib
 import signal
 import time
+import typing as typ
 
 import psutil
 
 DEFAULT_CONFIG = {
-    "blocked_apps": ["Discord", "slack", "steam", "brave", "brave-browser", "firefox"],
+    "blocked_apps": ["discord", "slack", "steam", "brave", "brave-browser", "firefox"],
     "check_interval": 0.5,
 }
 
@@ -74,8 +75,10 @@ class AppBlocker:
             with open(CONFIG_PATH, "r", encoding="utf-8") as f:
                 config = json.load(f)
 
-        new_blocked_apps = set(config["blocked_apps"])
-        new_check_interval = config["check_interval"]
+        new_blocked_apps: set[str] = {
+            x.lower() for x in typ.cast(list[str], config["blocked_apps"])
+        }
+        new_check_interval: float = config["check_interval"]
 
         # Check for changes in blocked apps
         if new_blocked_apps != self.blocked_apps:
@@ -113,7 +116,10 @@ class AppBlocker:
                 proc_name = proc.info["name"]
                 exe_name = proc.info["exe"].split("/")[-1] if proc.info["exe"] else ""
 
-                if proc_name in self.blocked_apps or exe_name in self.blocked_apps:
+                if (
+                    str(proc_name).lower() in self.blocked_apps
+                    or str(exe_name).lower() in self.blocked_apps
+                ):
                     logger.warning("Killing %s (PID %d)", proc_name, proc.pid)
                     proc.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
