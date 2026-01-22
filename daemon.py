@@ -90,6 +90,8 @@ class AppBlocker:
             for app in removed:
                 logger.info("Removed from blocked apps: %s", f"{app!r}")
 
+            self.blocked_apps = new_blocked_apps
+
         # Check for changes in check interval
         if new_check_interval != self.check_interval:
             logger.info(
@@ -97,9 +99,8 @@ class AppBlocker:
                 self.check_interval,
                 new_check_interval,
             )
+            self.check_interval = new_check_interval
 
-        self.blocked_apps = new_blocked_apps
-        self.check_interval = new_check_interval
         logger.info(
             "Config loaded. Apps: %s, Interval: %fs",
             self.blocked_apps,
