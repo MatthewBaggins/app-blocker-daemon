@@ -5,6 +5,7 @@ Reads blocked apps from config.json and kills matching processes.
 """
 
 import copy
+import functools
 import json
 import logging
 from logging.handlers import RotatingFileHandler
@@ -23,25 +24,29 @@ DEFAULT_CONFIG = {
 CONFIG_PATH = pathlib.Path(__file__).parent / "config.json"
 LOGS_DIR = pathlib.Path(__file__).parent / "logs"
 
-# Create logs directory if it doesn't exist
-LOGS_DIR.mkdir(exist_ok=True)
 
-# Set up logging
-logger = logging.getLogger("AppBlocker")
-logger.setLevel(logging.DEBUG)
+@functools.lru_cache(maxsize=1)
+def get_logger() -> logging.Logger:
+    # Create logs directory if it doesn't exist
+    LOGS_DIR.mkdir(exist_ok=True)
 
-# Rotating file handler (max 5MB per file, keep 5 backups)
-handler = RotatingFileHandler(
-    LOGS_DIR / "daemon.log",
-    maxBytes=5 * 1024 * 1024,  # 5MB
-    backupCount=5,
-)
-formatter = logging.Formatter(
-    "%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+    # Set up logging
+    logger = logging.getLogger("AppBlocker")
+    logger.setLevel(logging.DEBUG)
+
+    # Rotating file handler (max 5MB per file, keep 5 backups)
+    handler = RotatingFileHandler(
+        LOGS_DIR / "daemon.log",
+        maxBytes=5 * 1024 * 1024,  # 5MB
+        backupCount=5,
+    )
+    formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
 
 
 class AppBlocker:
@@ -56,6 +61,7 @@ class AppBlocker:
 
     def reload(self) -> None:
         """Reload the settings from `./config.json`."""
+        logger = get_logger()
         if not CONFIG_PATH.exists():
             config = copy.deepcopy(DEFAULT_CONFIG)
             with open(CONFIG_PATH, "w", encoding="utf-8") as f:
@@ -95,6 +101,7 @@ class AppBlocker:
 
     def kill_blocked_apps(self) -> None:
         """Kill any processes matching blocked app names."""
+        logger = get_logger()
         if not self.blocked_apps:
             return
         for proc in psutil.process_iter(["name", "exe"]):
@@ -110,6 +117,7 @@ class AppBlocker:
 
 
 def main() -> None:
+    logger = get_logger()
     logger.info("App Blocker started")
     logger.info("Config: %s", CONFIG_PATH)
     logger.info("Logs: %s", LOGS_DIR / "daemon.log")
