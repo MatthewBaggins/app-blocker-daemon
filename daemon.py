@@ -56,7 +56,7 @@ class AppBlocker:
 
     def __init__(self) -> None:
         self.blocked_apps = set()
-        self.check_interval = 0.0
+        self.check_interval = DEFAULT_CONFIG["check_interval"]
         self.reload()
 
     def reload(self) -> None:
