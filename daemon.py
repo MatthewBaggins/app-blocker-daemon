@@ -137,9 +137,9 @@ class AppBlocker:
                 proc_name = proc.info["name"]
                 exe_name = proc.info["exe"].split("/")[-1] if proc.info["exe"] else ""
 
-                if self.is_in_blocked_apps(str(proc_name)) or self.is_in_blocked_apps(
-                    str(exe_name)
-                ):
+                if self.is_in_blocked_apps(
+                    str(proc_name).lower()
+                ) or self.is_in_blocked_apps(str(exe_name).lower()):
                     logger.warning("Killing %s (PID %d)", proc_name, proc.pid)
                     proc.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
@@ -147,13 +147,7 @@ class AppBlocker:
 
     def is_in_blocked_apps(self, name: str) -> bool:
         """Check if this name is in blocked apps."""
-        name = name.lower()
-        if name in self.blocked_apps:
-            return True
-        for subname in name.split("-"):
-            if subname in self.blocked_apps:
-                return True
-        return False
+        return any(x in self.blocked_apps for x in [name, *name.split("-")])
 
 
 def main() -> None:
