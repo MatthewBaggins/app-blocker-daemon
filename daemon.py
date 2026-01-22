@@ -9,8 +9,31 @@ import signal
 import time
 import pathlib
 import psutil
+import logging
+from logging.handlers import RotatingFileHandler
 
 CONFIG_PATH = pathlib.Path(__file__).parent / "config.json"
+LOGS_DIR = pathlib.Path(__file__).parent / "logs"
+
+# Create logs directory if it doesn't exist
+LOGS_DIR.mkdir(exist_ok=True)
+
+# Set up logging
+logger = logging.getLogger("AppBlocker")
+logger.setLevel(logging.DEBUG)
+
+# Rotating file handler (max 5MB per file, keep 5 backups)
+handler = RotatingFileHandler(
+    LOGS_DIR / "daemon.log",
+    maxBytes=5 * 1024 * 1024,  # 5MB
+    backupCount=5,
+)
+formatter = logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 class AppBlocker:
@@ -19,6 +42,8 @@ class AppBlocker:
     check_interval: float
 
     def __init__(self) -> None:
+        self.blocked_apps = set()
+        self.check_interval = 0.0
         self.reload()
 
     def reload(self) -> None:
@@ -26,8 +51,35 @@ class AppBlocker:
         assert CONFIG_PATH.exists()
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             config = json.load(f)
-        self.blocked_apps = set(config["blocked_apps"])
-        self.check_interval = config["check_interval"]
+
+        new_blocked_apps = set(config["blocked_apps"])
+        new_check_interval = config["check_interval"]
+
+        # Check for changes in blocked apps
+        if new_blocked_apps != self.blocked_apps:
+            added = new_blocked_apps - self.blocked_apps
+            removed = self.blocked_apps - new_blocked_apps
+
+            for app in added:
+                logger.info("Added to blocked apps: %s", f"{app!r}")
+            for app in removed:
+                logger.info("Removed from blocked apps: %s", f"{app!r}")
+
+        # Check for changes in check interval
+        if new_check_interval != self.check_interval:
+            logger.info(
+                "Check interval changed from %f to %f",
+                self.check_interval,
+                new_check_interval,
+            )
+
+        self.blocked_apps = new_blocked_apps
+        self.check_interval = new_check_interval
+        logger.info(
+            "Config loaded. Apps: %s, Interval: %fs",
+            self.blocked_apps,
+            self.check_interval,
+        )
 
     def kill_blocked_apps(self) -> None:
         """Kill any processes matching blocked app names."""
@@ -39,22 +91,23 @@ class AppBlocker:
                 exe_name = proc.info["exe"].split("/")[-1] if proc.info["exe"] else ""
 
                 if proc_name in self.blocked_apps or exe_name in self.blocked_apps:
-                    print(f"Killing {proc_name} (PID {proc.pid})")
+                    logger.warning("Killing %s (PID %d)", proc_name, proc.pid)
                     proc.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
 
 
 def main() -> None:
-    print("App Blocker started")
-    print(f"Config: {CONFIG_PATH}")
+    logger.info("App Blocker started")
+    logger.info("Config: %s", CONFIG_PATH)
+    logger.info("Logs: %s", LOGS_DIR / "daemon.log")
 
     # Handle graceful shutdown
     running = True
 
     def _shutdown(_sig, _frame) -> None:
         nonlocal running
-        print("\nShutting down...")
+        logger.info("Shutdown signal received")
         running = False
 
     signal.signal(signal.SIGINT, _shutdown)
@@ -70,16 +123,15 @@ def main() -> None:
             if mtime > last_mtime:
                 app_blocker.reload()
                 last_mtime = mtime
-                print(f"Loaded blocked apps: {app_blocker.blocked_apps}")
         except FileNotFoundError:
-            pass
+            logger.error("Config file not found: %s", CONFIG_PATH)
 
         # Kill blocked apps
         app_blocker.kill_blocked_apps()
 
         time.sleep(app_blocker.check_interval)
 
-    print("Daemon stopped")
+    logger.info("Daemon stopped")
 
 
 if __name__ == "__main__":
