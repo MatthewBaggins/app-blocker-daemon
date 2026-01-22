@@ -5,8 +5,8 @@ cat > config.json << 'EOF'
     "slack",
     "steam",
     "brave",
-    "brave-browser",
-    "firefox"
+    "firefox",
+    "signal"
   ],
   "check_interval": 0.5
 }
