@@ -4,30 +4,7 @@ Standalone daemon for blocking applications on Ubuntu.
 
 ## Install
 
-From the repo root directory:
-
-```bash
-REPO_PATH=$(pwd)
-sed "s|REPO_PATH_PLACEHOLDER|$REPO_PATH|g" site-blocker.service > ~/.config/systemd/user/site-blocker.service
-chmod +x daemon.py
-cat > config.json << 'EOF'
-{
-  "blocked_apps": [
-    "Discord",
-    "slack",
-    "steam",
-    "brave",
-    "brave-browser",
-    "firefox",
-    "code"
-  ],
-  "check_interval": 0.5
-}
-EOF
-systemctl --user daemon-reload
-systemctl --user enable --now site-blocker.service
-systemctl --user status site-blocker.service
-```
+Run `./install.sh`.
 
 ## Configure
 
@@ -53,12 +30,7 @@ Config changes auto-reload while running.
 
 ## Uninstall
 
-```bash
-systemctl --user stop site-blocker.service
-systemctl --user disable site-blocker.service
-rm ~/.config/systemd/user/site-blocker.service
-systemctl --user daemon-reload
-```
+Run `./uninstall.sh`.
 
 ## Manual Run
 
