@@ -27,6 +27,7 @@ LOGS_DIR = pathlib.Path(__file__).parent / "logs"
 
 @functools.lru_cache(maxsize=1)
 def get_logger() -> logging.Logger:
+    """Get the logger."""
     # Create logs directory if it doesn't exist
     LOGS_DIR.mkdir(exist_ok=True)
 
@@ -40,16 +41,19 @@ def get_logger() -> logging.Logger:
         maxBytes=5 * 1024 * 1024,  # 5MB
         backupCount=5,
     )
-    formatter = logging.Formatter(
-        "%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+    handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
     )
-    handler.setFormatter(formatter)
     logger.addHandler(handler)
     return logger
 
 
 class AppBlocker:
+    """Blocker of apps."""
+
     __slots__ = ("blocked_apps", "check_interval")
     blocked_apps: set[str]
     check_interval: float
