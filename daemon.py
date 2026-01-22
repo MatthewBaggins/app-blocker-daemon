@@ -62,9 +62,9 @@ class AppBlocker:
     def __init__(self) -> None:
         self.blocked_apps = set()
         self.check_interval = DEFAULT_CONFIG["check_interval"]
-        self.reload()
+        self.reload(on_init=True)
 
-    def reload(self) -> None:
+    def reload(self, *, on_init: bool = False) -> None:
         """Reload the settings from `./config.json`."""
         logger = get_logger()
         if not CONFIG_PATH.exists():
@@ -75,31 +75,37 @@ class AppBlocker:
             with open(CONFIG_PATH, "r", encoding="utf-8") as f:
                 config = json.load(f)
 
-        new_blocked_apps: set[str] = {
-            x.lower() for x in typ.cast(list[str], config["blocked_apps"])
-        }
-        new_check_interval: float = config["check_interval"]
+        if on_init:
+            self.blocked_apps: set[str] = {
+                x.lower() for x in typ.cast(list[str], config["blocked_apps"])
+            }
+            self.check_interval: float = config["check_interval"]
+        else:
+            new_blocked_apps: set[str] = {
+                x.lower() for x in typ.cast(list[str], config["blocked_apps"])
+            }
+            new_check_interval: float = config["check_interval"]
 
-        # Check for changes in blocked apps
-        if new_blocked_apps != self.blocked_apps:
-            added = new_blocked_apps - self.blocked_apps
-            removed = self.blocked_apps - new_blocked_apps
+            # Check for changes in blocked apps
+            if new_blocked_apps != self.blocked_apps:
+                added = new_blocked_apps - self.blocked_apps
+                removed = self.blocked_apps - new_blocked_apps
 
-            for app in added:
-                logger.info("Added to blocked apps: %s", f"{app!r}")
-            for app in removed:
-                logger.info("Removed from blocked apps: %s", f"{app!r}")
+                for app in added:
+                    logger.info("Added to blocked apps: %s", f"{app!r}")
+                for app in removed:
+                    logger.info("Removed from blocked apps: %s", f"{app!r}")
 
-            self.blocked_apps = new_blocked_apps
+                self.blocked_apps = new_blocked_apps
 
-        # Check for changes in check interval
-        if new_check_interval != self.check_interval:
-            logger.info(
-                "Check interval changed from %f to %f",
-                self.check_interval,
-                new_check_interval,
-            )
-            self.check_interval = new_check_interval
+            # Check for changes in check interval
+            if new_check_interval != self.check_interval:
+                logger.info(
+                    "Check interval changed from %f to %f",
+                    self.check_interval,
+                    new_check_interval,
+                )
+                self.check_interval = new_check_interval
 
         logger.info(
             "Config loaded. Apps: %s, Interval: %fs",
