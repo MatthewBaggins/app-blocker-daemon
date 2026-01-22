@@ -9,9 +9,10 @@ import json
 import logging
 from logging.handlers import RotatingFileHandler
 import pathlib
-import psutil
 import signal
 import time
+
+import psutil
 
 DEFAULT_CONFIG = {
     "blocked_apps": ["Discord", "slack", "steam", "brave", "brave-browser", "firefox"],
