@@ -2,9 +2,20 @@
 
 Standalone daemon for blocking applications on Ubuntu.
 
-## Install
+## Installation etc
 
-Run `./install.sh`.
+- Install: `./install.sh`
+- Uninstall: `./uninstall.sh`
+- Reinstall: `./reinstall.sh`
+- Reset config (to default settings): `./reset_config.sh`
+  
+## Control
+
+- Start: `systemctl --user start site-blocker.service`
+- Stop: `systemctl --user stop site-blocker.service`
+- Status: `systemctl --user status site-blocker.service`
+- Logs: `journalctl --user -u site-blocker.service -f`
+
 
 ## Configure
 
@@ -19,18 +30,7 @@ Edit `config.json`:
 
 To find app process names: `ps aux | grep -i appname`
 
-Config changes auto-reload while running.
-
-## Control
-
-- Start: `systemctl --user start site-blocker.service`
-- Stop: `systemctl --user stop site-blocker.service`
-- Status: `systemctl --user status site-blocker.service`
-- Logs: `journalctl --user -u site-blocker.service -f`
-
-## Uninstall
-
-Run `./uninstall.sh`.
+Config changes auto-reload while running, with the checking time determined by `check_interval`.
 
 ## Manual Run
 
