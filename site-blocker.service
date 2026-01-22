@@ -1,0 +1,13 @@
+[Unit]
+Description=Site Blocker App Daemon
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=REPO_PATH_PLACEHOLDER/daemon
+ExecStart=REPO_PATH_PLACEHOLDER/daemon/daemon.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
