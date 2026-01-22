@@ -39,6 +39,7 @@ Run `./uninstall.sh`.
 ```
 
 Or in background:
+
 ```bash
 nohup ./daemon.py &
 ```

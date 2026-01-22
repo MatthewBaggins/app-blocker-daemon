@@ -15,20 +15,7 @@ chmod +x daemon.py
 
 # Create config if it doesn't exist
 if [ ! -f config.json ]; then
-  cat > config.json << 'EOF'
-{
-  "blocked_apps": [
-    "Discord",
-    "slack",
-    "steam",
-    "brave",
-    "brave-browser",
-    "firefox"
-  ],
-  "check_interval": 0.5
-}
-EOF
-  echo "Created config.json"
+  ./reset_config.sh
 fi
 
 # Enable and start the service

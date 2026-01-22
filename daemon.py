@@ -4,13 +4,20 @@ Standalone app blocker daemon.
 Reads blocked apps from config.json and kills matching processes.
 """
 
+import copy
 import json
-import signal
-import time
-import pathlib
-import psutil
 import logging
 from logging.handlers import RotatingFileHandler
+import pathlib
+import psutil
+import signal
+import time
+
+DEFAULT_CONFIG = {
+    "blocked_apps": ["Discord", "slack", "steam", "brave", "brave-browser", "firefox"],
+    "check_interval": 0.5,
+}
+
 
 CONFIG_PATH = pathlib.Path(__file__).parent / "config.json"
 LOGS_DIR = pathlib.Path(__file__).parent / "logs"
@@ -48,9 +55,13 @@ class AppBlocker:
 
     def reload(self) -> None:
         """Reload the settings from `./config.json`."""
-        assert CONFIG_PATH.exists()
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-            config = json.load(f)
+        if not CONFIG_PATH.exists():
+            config = copy.deepcopy(DEFAULT_CONFIG)
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(config, f)
+        else:
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                config = json.load(f)
 
         new_blocked_apps = set(config["blocked_apps"])
         new_check_interval = config["check_interval"]
