@@ -1,3 +1,4 @@
+#!/bin/bash
 cat > config.json << 'EOF'
 {
   "blocked_apps": [

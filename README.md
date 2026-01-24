@@ -44,3 +44,5 @@ Or in background:
 ```bash
 nohup ./daemon.py &
 ```
+
+`config.json` is reset on every boot to the default defined in `reset_config.sh`.
