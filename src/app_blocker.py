@@ -26,7 +26,7 @@ class AppBlocker:
         self.blocked_apps_reset_interval: float = BLOCKED_APPS_RESET_INTERVAL
         self.reload(on_init=True)
 
-    def reload(self, *, on_init: bool = False) -> None:
+    def reload(self, *, on_init: bool) -> None:
         """Reload the settings from `./blocked_apps.json`."""
         logger = get_logger()
 

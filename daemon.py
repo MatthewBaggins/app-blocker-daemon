@@ -40,7 +40,7 @@ def main() -> None:
     while running:
         mtime = BLOCKED_APPS_PATH.stat().st_mtime
         if mtime > last_mtime:
-            app_blocker.reload()
+            app_blocker.reload(on_init=False)
             last_mtime = mtime
 
         # Kill blocked apps
