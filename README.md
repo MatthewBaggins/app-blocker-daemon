@@ -9,7 +9,7 @@ For a site-blocking Chromium/Brave extension, see [site-blocker](https://github.
 - Install: `./install.sh`
 - Uninstall: `./uninstall.sh`
 - Reinstall: `./reinstall.sh`
-- Reset config.json (to default settings): `./reset_config.sh`
+- Reset `blocked_apps.json` (to default settings): `./reset_blocked_apps.sh`
 
 ## Configure
 
@@ -45,4 +45,4 @@ Or in background:
 nohup ./daemon.py &
 ```
 
-`config.json` is reset on every boot to the default defined in `reset_config.sh`.
+`blocked_apps.json` is reset on every boot to the default defined in `reset_blocked_apps.sh`.

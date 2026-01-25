@@ -4,7 +4,6 @@ Standalone app blocker daemon.
 Reads blocked apps from config.json and kills matching processes.
 """
 
-import copy
 import functools
 import json
 import logging
@@ -17,32 +16,21 @@ import typing as typ
 import psutil
 
 
-class Config(typ.TypedDict):
-    blocked_apps: list[str]
-    check_interval: float
+DEFAULT_BLOCKED_APPS: list[str] = [
+    "discord",
+    "slack",
+    "steam",
+    "brave",
+    "firefox",
+    "signal",
+]
 
 
-def is_config(x: object) -> typ.TypeGuard[Config]:
-    if not isinstance(x, dict):
-        return False
-    if set(x) != {"blocked_apps", "check_interval"}:
-        return False
-    if not isinstance(bas := x["blocked_apps"], list) and all(
-        isinstance(ba, str) for ba in bas
-    ):
-        return False
-    if not isinstance(x["check_interval"], float):
-        return False
-    return True
+def is_list_of_strings(x: object) -> typ.TypeGuard[list[str]]:
+    return isinstance(x, list) and all(isinstance(el, str) for el in x)
 
 
-DEFAULT_CONFIG: Config = {
-    "blocked_apps": ["discord", "slack", "steam", "brave", "firefox", "signal"],
-    "check_interval": 0.5,
-}
-
-
-CONFIG_PATH = pathlib.Path(__file__).parent / "config.json"
+BLOCKED_APPS_PATH = pathlib.Path(__file__).parent / "blocked_apps.json"
 LOGS_DIR = pathlib.Path(__file__).parent / "logs"
 
 
@@ -75,29 +63,34 @@ def get_logger() -> logging.Logger:
 class AppBlocker:
     """Blocker of apps."""
 
-    __slots__ = ("blocked_apps", "check_interval")
+    __slots__ = (
+        "blocked_apps",
+        "blocked_apps_check_interval",
+        "blocked_apps_reset_interval",
+    )
     blocked_apps: set[str]
-    check_interval: float
+    blocked_apps_check_interval: float
+    blocked_apps_reset_interval: float
 
     def __init__(self) -> None:
         self.blocked_apps = set()
-        self.check_interval = DEFAULT_CONFIG["check_interval"]
+        self.blocked_apps_check_interval = 0.5  # 500 ms
+        self.blocked_apps_reset_interval = 60.0  # 1 minute
         self.reload(on_init=True)
 
     def reload(self, *, on_init: bool = False) -> None:
-        """Reload the settings from `./config.json`."""
+        """Reload the settings from `./blocked_apps.json`."""
         logger = get_logger()
-        if not CONFIG_PATH.exists():
-            config = copy.deepcopy(DEFAULT_CONFIG)
-            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-                json.dump(config, f)
-        else:
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                config = json.load(f)
-                assert is_config(config)
 
-        new_blocked_apps = {x.lower() for x in config["blocked_apps"]}
-        new_check_interval = config["check_interval"]
+        # TODO: separate this into a separate method?
+        if not BLOCKED_APPS_PATH.exists():
+            with open(BLOCKED_APPS_PATH, "w", encoding="utf-8") as f:
+                json.dump(DEFAULT_BLOCKED_APPS, f)
+
+        with open(BLOCKED_APPS_PATH, "r", encoding="utf-8") as f:
+            new_blocked_apps = json.load(f)
+            assert is_list_of_strings(new_blocked_apps)
+            new_blocked_apps = {x.lower() for x in new_blocked_apps}
 
         if not on_init:
             # Check for changes in blocked apps
@@ -110,22 +103,9 @@ class AppBlocker:
                 for app in removed:
                     logger.info("Removed from blocked apps: %s", f"{app!r}")
 
-            # Check for changes in check interval
-            if new_check_interval != self.check_interval:
-                logger.info(
-                    "Check interval changed from %f to %f",
-                    self.check_interval,
-                    new_check_interval,
-                )
-
         self.blocked_apps = new_blocked_apps
-        self.check_interval = new_check_interval
 
-        logger.info(
-            "Config loaded. Apps: %s, Interval: %fs",
-            self.blocked_apps,
-            self.check_interval,
-        )
+        logger.info("Blocked apps loaded. Apps: %s", self.blocked_apps)
 
     def kill_blocked_apps(self) -> None:
         """Kill any processes matching blocked app names."""
@@ -153,7 +133,7 @@ class AppBlocker:
 def main() -> None:
     logger = get_logger()
     logger.info("App Blocker started")
-    logger.info("Config: %s", CONFIG_PATH)
+    logger.info("Config: %s", BLOCKED_APPS_PATH)
     logger.info("Logs: %s", LOGS_DIR / "daemon.log")
 
     # Handle graceful shutdown
@@ -171,19 +151,20 @@ def main() -> None:
     app_blocker = AppBlocker()
 
     while running:
+        # no need to wrap it in try-except because the case of file not exisitng is handled in reload
         # Reload config if changed
-        try:
-            mtime = CONFIG_PATH.stat().st_mtime
-            if mtime > last_mtime:
-                app_blocker.reload()
-                last_mtime = mtime
-        except FileNotFoundError:
-            logger.error("Config file not found: %s", CONFIG_PATH)
+        # try:
+        mtime = BLOCKED_APPS_PATH.stat().st_mtime
+        if mtime > last_mtime:
+            app_blocker.reload()
+            last_mtime = mtime
+        # except FileNotFoundError:
+        #     logger.error("Blockd apps file not found: %s", BLOCKED_APPS_PATH)
 
         # Kill blocked apps
         app_blocker.kill_blocked_apps()
 
-        time.sleep(app_blocker.check_interval)
+        time.sleep(app_blocker.blocked_apps_check_interval)
 
     logger.info("Daemon stopped")
 

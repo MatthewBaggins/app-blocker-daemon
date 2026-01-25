@@ -15,7 +15,7 @@ chmod +x daemon.py
 
 # Create config if it doesn't exist
 if [ ! -f config.json ]; then
-  ./reset_config.sh
+  ./reset_blocked_apps.sh
 fi
 
 # Enable and start the service

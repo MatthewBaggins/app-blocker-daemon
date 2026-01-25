@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=REPO_PATH_PLACEHOLDER
-ExecStartPre=REPO_PATH_PLACEHOLDER/reset_config.sh
+ExecStartPre=REPO_PATH_PLACEHOLDER/reset_blocked_apps.sh
 ExecStart=REPO_PATH_PLACEHOLDER/daemon.py
 Restart=on-failure
 RestartSec=5
