@@ -44,9 +44,9 @@ class AppBlocker:
                 added = new_blocked_apps - self.blocked_apps
                 removed = self.blocked_apps - new_blocked_apps
                 for app in added:
-                    logger.info("Added to blocked apps: %s", f"{app!r}")
+                    logger.info("Added to blocked apps: %r", app)
                 for app in removed:
-                    logger.info("Removed from blocked apps: %s", f"{app!r}")
+                    logger.info("Removed from blocked apps: %r", app)
 
         self.blocked_apps = new_blocked_apps
 
