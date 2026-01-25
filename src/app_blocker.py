@@ -2,7 +2,12 @@ import json
 
 import psutil
 
-from src.constants import BLOCKED_APPS_PATH, DEFAULT_BLOCKED_APPS
+from src.constants import (
+    BLOCKED_APPS_PATH,
+    DEFAULT_BLOCKED_APPS,
+    BLOCKED_APPS_CHECK_INTERVAL,
+    BLOCKED_APPS_RESET_INTERVAL,
+)
 from src.get_logger import get_logger
 from src.utils import is_list_of_strings
 
@@ -15,24 +20,16 @@ class AppBlocker:
         "blocked_apps_check_interval",
         "blocked_apps_reset_interval",
     )
-    blocked_apps: set[str]
-    blocked_apps_check_interval: float
-    blocked_apps_reset_interval: float
 
     def __init__(self) -> None:
-        self.blocked_apps = set()
-        self.blocked_apps_check_interval = 0.5  # 500 ms
-        self.blocked_apps_reset_interval = 60.0  # 1 minute
+        self.blocked_apps: set[str] = set()
+        self.blocked_apps_check_interval: float = BLOCKED_APPS_CHECK_INTERVAL
+        self.blocked_apps_reset_interval: float = BLOCKED_APPS_RESET_INTERVAL
         self.reload(on_init=True)
 
     def reload(self, *, on_init: bool = False) -> None:
         """Reload the settings from `./blocked_apps.json`."""
         logger = get_logger()
-
-        # TODO: separate this into a separate method?
-        if not BLOCKED_APPS_PATH.exists():
-            with open(BLOCKED_APPS_PATH, "w", encoding="utf-8") as f:
-                json.dump(DEFAULT_BLOCKED_APPS, f)
 
         with open(BLOCKED_APPS_PATH, "r", encoding="utf-8") as f:
             new_blocked_apps = json.load(f)
@@ -44,7 +41,6 @@ class AppBlocker:
             if new_blocked_apps != self.blocked_apps:
                 added = new_blocked_apps - self.blocked_apps
                 removed = self.blocked_apps - new_blocked_apps
-
                 for app in added:
                     logger.info("Added to blocked apps: %s", f"{app!r}")
                 for app in removed:
@@ -64,14 +60,44 @@ class AppBlocker:
                 proc_name = proc.info["name"]
                 exe_name = proc.info["exe"].split("/")[-1] if proc.info["exe"] else ""
 
-                if self.is_in_blocked_apps(
+                if self._is_in_blocked_apps(
                     str(proc_name).lower()
-                ) or self.is_in_blocked_apps(str(exe_name).lower()):
+                ) or self._is_in_blocked_apps(str(exe_name).lower()):
                     logger.warning("Killing %s (PID %d)", proc_name, proc.pid)
                     proc.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
 
-    def is_in_blocked_apps(self, name: str) -> bool:
+    def write_inactive_blocked_apps_to_file(self) -> None:
+        """Reset `blocked_app.json`, except for the apps that are currently active."""
+        logger = get_logger()
+        inactive_default_blocked_apps = [
+            app for app in DEFAULT_BLOCKED_APPS if not self._is_active_app(app)
+        ]
+        new_blocked_apps = inactive_default_blocked_apps + list(self.blocked_apps)
+        with open(BLOCKED_APPS_PATH, "r", encoding="utf-8") as f:
+            json.dump(new_blocked_apps, f)
+        logger.info("Reset blocked_apps.json to: %s", new_blocked_apps)
+
+    def _is_in_blocked_apps(self, name: str) -> bool:
         """Check if this name is in blocked apps."""
         return any(x in self.blocked_apps for x in [name, *name.split("-")])
+
+    @staticmethod
+    def _is_active_app(app: str) -> bool:
+        """Check if the app is currently active."""
+        for proc in psutil.process_iter(["name", "exe"]):
+            try:
+                proc_name = proc.info["name"]
+                exe_name = proc.info["exe"].split("/")[-1] if proc.info["exe"] else ""
+
+                if app.lower() in [str(proc_name).lower(), str(exe_name).lower()]:
+                    return True
+                # Also check split names (e.g., "app-name" -> "app", "name")
+                if app.lower() in str(proc_name).lower().split(
+                    "-"
+                ) or app.lower() in str(exe_name).lower().split("-"):
+                    return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        return False

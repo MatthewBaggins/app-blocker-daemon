@@ -31,6 +31,11 @@ def main() -> None:
 
     last_mtime: float = 0
     app_blocker = AppBlocker()
+    n_turns_for_reset: int = int(
+        app_blocker.blocked_apps_reset_interval
+        // app_blocker.blocked_apps_check_interval
+    )
+    n_turns: int = 0
 
     while running:
         mtime = BLOCKED_APPS_PATH.stat().st_mtime
@@ -42,6 +47,10 @@ def main() -> None:
         app_blocker.kill_blocked_apps()
 
         time.sleep(app_blocker.blocked_apps_check_interval)
+        n_turns += 1
+        if n_turns >= n_turns_for_reset:
+            app_blocker.write_inactive_blocked_apps_to_file()
+            n_turns = 0
 
     logger.info("Daemon stopped")
 

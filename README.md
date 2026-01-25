@@ -13,13 +13,10 @@ For a site-blocking Chromium/Brave extension, see [site-blocker](https://github.
 
 ## Configure
 
-Edit `config.json`:
+Edit `blocked_apps.json`:
 
 ```json
-{
-  "blocked_apps": ["app_name", "another_app"],
-  "check_interval": 0.5
-}
+["app_name", "another_app"]
 ```
 
 To find app process names: `ps aux | grep -i appname`
@@ -45,4 +42,4 @@ Or in background:
 nohup ./daemon.py &
 ```
 
-`blocked_apps.json` is reset on every boot to the default defined in `reset_blocked_apps.sh`.
+`blocked_apps.json` is reset on every boot to the default defined in `reset_blocked_apps.sh`. It also resets every minute (except for the apps that are currently running).
