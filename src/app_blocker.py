@@ -4,12 +4,11 @@ import psutil
 
 from src.constants import (
     BLOCKED_APPS_PATH,
-    DEFAULT_BLOCKED_APPS,
     BLOCKED_APPS_CHECK_INTERVAL,
     BLOCKED_APPS_RESET_INTERVAL,
 )
 from src.get_logger import get_logger
-from src.utils import is_list_of_strings
+from src.utils import is_list_of_strings, load_default_blocked_apps
 
 
 class AppBlocker:
@@ -32,7 +31,7 @@ class AppBlocker:
         logger = get_logger()
 
         if not BLOCKED_APPS_PATH.exists():
-            self._write_to_blocked_apps_file(DEFAULT_BLOCKED_APPS)
+            self._write_to_blocked_apps_file(load_default_blocked_apps())
 
         with open(BLOCKED_APPS_PATH, "r", encoding="utf-8") as f:
             new_blocked_apps = json.load(f)
@@ -75,7 +74,7 @@ class AppBlocker:
         """Reset `blocked_app.json`, except for the apps that are currently active."""
         logger = get_logger()
         inactive_default_blocked_apps = [
-            app for app in DEFAULT_BLOCKED_APPS if not self._is_active_app(app)
+            app for app in load_default_blocked_apps() if not self._is_active_app(app)
         ]
         new_blocked_apps: list[str] = sorted(
             self.blocked_apps.union(inactive_default_blocked_apps)

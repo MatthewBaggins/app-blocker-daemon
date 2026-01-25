@@ -13,8 +13,24 @@ sed "s|REPO_PATH_PLACEHOLDER|$REPO_PATH|g" site-blocker.service > ~/.config/syst
 # Make daemon executable
 chmod +x daemon.py
 
-# Create config if it doesn't exist
-if [ ! -f config.json ]; then
+# Creat default blocked apps file config if it doesn't exist
+if [ ! -f default_blocked_apps.json ]; then
+cat > default_blocked_apps.json << 'EOF'
+[
+  "discord",
+  "slack",
+  "steam",
+  "brave",
+  "firefox",
+  "signal"
+]
+EOF
+echo "Created default_blocked_apps.json"
+fi
+
+
+# Create blocked apps file config if it doesn't exist
+if [ ! -f blocked_apps.json ]; then
   ./reset_blocked_apps.sh
 fi
 

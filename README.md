@@ -21,7 +21,7 @@ Edit `blocked_apps.json`:
 
 To find app process names: `ps aux | grep -i appname`
 
-Config changes auto-reload while running.
+Blocked apps file changes auto-reload while running.
 
 ## Control
 
@@ -39,7 +39,7 @@ Config changes auto-reload while running.
 Or in background:
 
 ```bash
-nohup ./daemon.py &
+nohup ./daemon.py
 ```
 
 `blocked_apps.json` is reset on every boot to the default defined in `reset_blocked_apps.sh`. It also resets every minute (except for the apps that are currently running).
