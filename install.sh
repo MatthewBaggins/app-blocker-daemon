@@ -17,12 +17,12 @@ chmod +x daemon.py
 if [ ! -f default_blocked_apps.json ]; then
 cat > default_blocked_apps.json << 'EOF'
 [
-  "discord",
-  "slack",
-  "steam",
   "brave",
+  "discord",
   "firefox",
-  "signal"
+  "signal",
+  "slack",
+  "steam"
 ]
 EOF
 echo "Created default_blocked_apps.json"
