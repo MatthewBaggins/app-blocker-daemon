@@ -1,4 +1,5 @@
 import json
+import time
 
 import psutil
 
@@ -6,6 +7,7 @@ from src.constants import (
     BLOCKED_APPS_PATH,
     BLOCKED_APPS_CHECK_INTERVAL,
     BLOCKED_APPS_RESET_INTERVAL,
+    LOGS_DIR,
 )
 from src.get_logger import get_logger
 from src.utils import is_list_of_strings, load_default_blocked_apps
@@ -18,12 +20,24 @@ class AppBlocker:
         "blocked_apps",
         "blocked_apps_check_interval",
         "blocked_apps_reset_interval",
+        "checks_since_last_reset",
     )
+    blocked_apps: set[str]
+    blocked_apps_check_interval: float
+    blocked_apps_reset_interval: float
+    checks_since_last_reset: int
 
     def __init__(self) -> None:
-        self.blocked_apps: set[str] = set()
-        self.blocked_apps_check_interval: float = BLOCKED_APPS_CHECK_INTERVAL
-        self.blocked_apps_reset_interval: float = BLOCKED_APPS_RESET_INTERVAL
+        self.blocked_apps = set()
+        self.blocked_apps_check_interval = BLOCKED_APPS_CHECK_INTERVAL
+        self.blocked_apps_reset_interval = BLOCKED_APPS_RESET_INTERVAL
+        self.checks_since_last_reset = 0
+
+        logger = get_logger()
+        logger.info("App Blocker started")
+        logger.info("Blocked apps file: %s", BLOCKED_APPS_PATH)
+        logger.info("Logs: %s", LOGS_DIR / "daemon.log")
+
         self.reload(on_init=True)
 
     def reload(self, *, on_init: bool) -> None:
@@ -52,8 +66,14 @@ class AppBlocker:
 
         logger.info("Blocked apps loaded. Apps: %s", self.blocked_apps)
 
-    def kill_blocked_apps(self) -> None:
-        """Kill any processes matching blocked app names."""
+    @property
+    def n_checks_for_reset(self) -> int:
+        return int(self.blocked_apps_reset_interval // self.blocked_apps_check_interval)
+
+    def act(self) -> None:
+        """Kill any processes matching blocked app names and (every reset interval)
+        reset `blocked_apps.json`.
+        """
         logger = get_logger()
         if not self.blocked_apps:
             return
@@ -69,8 +89,13 @@ class AppBlocker:
                     proc.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
+        time.sleep(self.blocked_apps_check_interval)
+        self.checks_since_last_reset += 1
+        if self.checks_since_last_reset >= self.n_checks_for_reset:
+            self._write_inactive_blocked_apps_to_file()
+            self.checks_since_last_reset = 0
 
-    def write_inactive_blocked_apps_to_file(self) -> None:
+    def _write_inactive_blocked_apps_to_file(self) -> None:
         """Reset `blocked_app.json`, except for the apps that are currently active."""
         logger = get_logger()
         inactive_default_blocked_apps = [
