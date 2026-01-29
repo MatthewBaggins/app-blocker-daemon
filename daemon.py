@@ -4,30 +4,19 @@ Standalone app blocker daemon.
 Reads blocked apps from blocked_apps.json and kills matching processes.
 """
 
-import signal
-
 from src.app_blocker import AppBlocker
 from src.constants import BLOCKED_APPS_PATH
-from src.get_logger import get_logger
+from src.register_shutdown_handling import register_shutdown_handling
+from src.utils import Box
 
 
 def main() -> None:
-    running: bool = True
-
-    def _shutdown(_sig, _frame) -> None:
-        logger = get_logger()
-        nonlocal running
-        logger.info("Shutdown signal received")
-        running = False
-        logger.info("Daemon stopped")
-
-    signal.signal(signal.SIGINT, _shutdown)
-    signal.signal(signal.SIGTERM, _shutdown)
-
-    last_mtime: float = 0
     app_blocker = AppBlocker()
+    running: Box[bool] = register_shutdown_handling()
+    last_mtime: float = 0
 
     while running:
+        # TODO: figure out whether this checking and stuff is actually necessary (and in what way/shape/form)
         if (mtime := BLOCKED_APPS_PATH.stat().st_mtime) > last_mtime:
             app_blocker.reload(on_init=False)
             last_mtime = mtime

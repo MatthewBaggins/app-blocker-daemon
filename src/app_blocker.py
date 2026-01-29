@@ -1,14 +1,11 @@
 import json
+import os
 import time
 
+from dotenv import load_dotenv
 import psutil
 
-from src.constants import (
-    BLOCKED_APPS_PATH,
-    BLOCKED_APPS_CHECK_INTERVAL,
-    BLOCKED_APPS_RESET_INTERVAL,
-    LOGS_DIR,
-)
+from src.constants import BLOCKED_APPS_PATH, LOGS_DIR
 from src.get_logger import get_logger
 from src.utils import is_list_of_strings, load_default_blocked_apps
 
@@ -22,21 +19,23 @@ class AppBlocker:
         "blocked_apps_reset_interval",
         "checks_since_last_reset",
     )
-    blocked_apps: set[str]
-    blocked_apps_check_interval: float
-    blocked_apps_reset_interval: float
-    checks_since_last_reset: int
 
     def __init__(self) -> None:
-        self.blocked_apps = set()
-        self.blocked_apps_check_interval = BLOCKED_APPS_CHECK_INTERVAL
-        self.blocked_apps_reset_interval = BLOCKED_APPS_RESET_INTERVAL
-        self.checks_since_last_reset = 0
-
+        load_dotenv()
         logger = get_logger()
+
+        self.blocked_apps: set[str] = set()
+        self.blocked_apps_check_interval: float = float(
+            os.environ["BLOCKED_APPS_CHECK_INTERVAL"]
+        )
+        self.blocked_apps_reset_interval: float = float(
+            os.environ["BLOCKED_APPS_RESET_INTERVAL"]
+        )
+        self.checks_since_last_reset: int = 0
+
         logger.info("App Blocker started")
-        logger.info("Blocked apps file: %s", BLOCKED_APPS_PATH)
-        logger.info("Logs: %s", LOGS_DIR / "daemon.log")
+        logger.info("Blocked apps file: %r", BLOCKED_APPS_PATH)
+        logger.info("Logs: %r", LOGS_DIR / "daemon.log")
 
         self.reload(on_init=True)
 
@@ -45,26 +44,42 @@ class AppBlocker:
         logger = get_logger()
 
         if not BLOCKED_APPS_PATH.exists():
-            self._write_to_blocked_apps_file(load_default_blocked_apps())
+            self._write_to_blocked_apps_file(
+                [
+                    app.lower()
+                    for app in load_default_blocked_apps()
+                    if not self._is_active_app(app.lower())
+                ]
+            )
 
         with open(BLOCKED_APPS_PATH, "r", encoding="utf-8") as f:
-            new_blocked_apps = json.load(f)
-            assert is_list_of_strings(new_blocked_apps)
-            new_blocked_apps = {x.lower() for x in new_blocked_apps}
+            blocked_apps_from_file = json.load(f)
+            assert is_list_of_strings(blocked_apps_from_file)
+            blocked_apps_from_file = {
+                app.lower()
+                for app in blocked_apps_from_file
+                if not self._is_active_app(app.lower())
+            }
 
         if not on_init:
             # Check for changes in blocked apps
-            if new_blocked_apps != self.blocked_apps:
-                added = new_blocked_apps - self.blocked_apps
-                removed = self.blocked_apps - new_blocked_apps
-                for app in added:
-                    logger.info("Added to blocked apps: %r", app)
-                for app in removed:
-                    logger.info("Removed from blocked apps: %r", app)
+            if blocked_apps_from_file != self.blocked_apps:
+                logger.info(
+                    "Added to blocked apps: %s",
+                    blocked_apps_from_file - self.blocked_apps,
+                )
+                logger.info(
+                    "Removed from blocked apps: %s",
+                    self.blocked_apps - blocked_apps_from_file,
+                )
 
-        self.blocked_apps = new_blocked_apps
+        self.blocked_apps = blocked_apps_from_file
 
-        logger.info("Blocked apps loaded. Apps: %s", self.blocked_apps)
+        logger.info(
+            "Blocked apps %sloaded. Apps: %s",
+            "" if on_init else "re",
+            self.blocked_apps,
+        )
 
     @property
     def n_checks_for_reset(self) -> int:
@@ -85,17 +100,17 @@ class AppBlocker:
                 if self._is_in_blocked_apps(
                     str(proc_name).lower()
                 ) or self._is_in_blocked_apps(str(exe_name).lower()):
-                    logger.warning("Killing %s (PID %d)", proc_name, proc.pid)
+                    logger.warning("Killing %r (PID %d)", proc_name, proc.pid)
                     proc.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
         time.sleep(self.blocked_apps_check_interval)
         self.checks_since_last_reset += 1
         if self.checks_since_last_reset >= self.n_checks_for_reset:
-            self._write_inactive_blocked_apps_to_file()
+            self._write_inactive_default_blocked_apps_to_file()
             self.checks_since_last_reset = 0
 
-    def _write_inactive_blocked_apps_to_file(self) -> None:
+    def _write_inactive_default_blocked_apps_to_file(self) -> None:
         """Reset `blocked_app.json`, except for the apps that are currently active."""
         logger = get_logger()
         inactive_default_blocked_apps = [
@@ -137,9 +152,9 @@ class AppBlocker:
                     return True
 
                 # Check if app is a substring (e.g., "signal" in "signal-desktop")
-                if app.lower() in str(proc_name).lower().split(
-                    "-"
-                ) or app.lower() in str(exe_name).lower().split("-"):
+                if app.lower() in (
+                    str(proc_name).lower().split("-") + str(exe_name).lower().split("-")
+                ):
                     logger.info(
                         "Found substring match: %r (proc_name=%r, exe_name=%r)",
                         app,

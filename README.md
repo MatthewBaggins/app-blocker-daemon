@@ -1,6 +1,6 @@
 # App Blocker Daemon
 
-Standalone daemon for blocking applications on Ubuntu.
+A daemon for blocking applications on Ubuntu.
 
 For a site-blocking Chromium/Brave extension, see [site-blocker](https://github.com/MatthewBaggins/site-blocker).
 
@@ -12,6 +12,17 @@ For a site-blocking Chromium/Brave extension, see [site-blocker](https://github.
 - Reset `blocked_apps.json` (to default settings): `./reset_blocked_apps.sh`
 
 ## Configure
+
+### Environment Variables
+
+Create a `.env` file in the project root with:
+
+```env
+BLOCKED_APPS_CHECK_INTERVAL=1
+BLOCKED_APPS_RESET_INTERVAL=60
+```
+
+### Blocked Apps
 
 Edit `blocked_apps.json`:
 
@@ -25,10 +36,10 @@ Blocked apps file changes auto-reload while running.
 
 ## Control
 
-- Start: `systemctl --user start site-blocker.service`
-- Stop: `systemctl --user stop site-blocker.service`
-- Status: `systemctl --user status site-blocker.service`
-- Logs: `journalctl --user -u site-blocker.service -f`
+- Start: `systemctl --user start app-blocker-daemon.service`
+- Stop: `systemctl --user stop app-blocker-daemon.service`
+- Status: `systemctl --user status app-blocker-daemon.service`
+- Logs: `journalctl --user -u app-blocker-daemon.service -f`
 
 ## Manual Run
 

@@ -3,11 +3,11 @@
 
 set -e
 
-echo "Uninstalling Site Blocker app daemon..."
+echo "Uninstalling App Blocker Daemon..."
 
-systemctl --user stop site-blocker.service
-systemctl --user disable site-blocker.service
-rm ~/.config/systemd/user/site-blocker.service
+systemctl --user stop app-blocker-daemon.service
+systemctl --user disable app-blocker-daemon.service
+rm ~/.config/systemd/user/app-blocker-daemon.service
 systemctl --user daemon-reload
 
 echo "Uninstallation complete!"

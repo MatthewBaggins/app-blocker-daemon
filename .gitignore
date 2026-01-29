@@ -6,3 +6,5 @@ config.json
 TODO
 blocked_apps.json
 default_blocked_apps.json
+.env
+*.log
