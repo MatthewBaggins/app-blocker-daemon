@@ -7,7 +7,7 @@ import psutil
 
 from src.constants import BLOCKED_APPS_PATH, LOGS_DIR
 from src.get_logger import get_logger
-from src.utils import is_list_of_strings, load_default_blocked_apps
+from src.utils import is_list_of_strings, load_default_blocked_apps, format_float
 
 
 class AppBlocker:
@@ -15,8 +15,8 @@ class AppBlocker:
 
     __slots__ = (
         "blocked_apps",
-        "blocked_apps_check_interval",
-        "blocked_apps_reset_interval",
+        "check_interval",
+        "reset_interval",
         "checks_since_last_reset",
     )
 
@@ -25,21 +25,17 @@ class AppBlocker:
         logger = get_logger()
 
         self.blocked_apps: set[str] = set()
-        self.blocked_apps_check_interval: float = float(
-            os.environ["BLOCKED_APPS_CHECK_INTERVAL"]
-        )
-        self.blocked_apps_reset_interval: float = float(
-            os.environ["BLOCKED_APPS_RESET_INTERVAL"]
-        )
+        self.check_interval: float = float(os.environ["CHECK_INTERVAL"])
+        self.reset_interval: float = float(os.environ["RESET_INTERVAL"])
         self.checks_since_last_reset: int = 0
 
         logger.info("App Blocker started")
         logger.info("Blocked apps file: %r", BLOCKED_APPS_PATH)
         logger.info("Logs: %r", LOGS_DIR / "daemon.log")
 
-        self.reload(on_init=True)
+        self.reload_blocked_apps(on_init=True)
 
-    def reload(self, *, on_init: bool) -> None:
+    def reload_blocked_apps(self, *, on_init: bool) -> None:
         """Reload the settings from `./blocked_apps.json`."""
         logger = get_logger()
 
@@ -72,7 +68,6 @@ class AppBlocker:
                     "Removed from blocked apps: %s",
                     self.blocked_apps - blocked_apps_from_file,
                 )
-
         self.blocked_apps = blocked_apps_from_file
 
         logger.info(
@@ -81,9 +76,34 @@ class AppBlocker:
             self.blocked_apps,
         )
 
+    def reload_dotenv(self) -> None:
+        # Check for changes in .env
+        logger = get_logger()
+        load_dotenv(override=True)
+
+        if self.check_interval != (
+            new_check_interval := float(os.environ["CHECK_INTERVAL"])
+        ):
+            logger.info(
+                "check_interval changed from %s to %s",
+                format_float(self.check_interval),
+                format_float(new_check_interval),
+            )
+            self.check_interval = new_check_interval
+
+        if self.reset_interval != (
+            new_reset_interval := float(os.environ["RESET_INTERVAL"])
+        ):
+            logger.info(
+                "reset_interval changed from %s to %s",
+                format_float(self.reset_interval),
+                format_float(new_reset_interval),
+            )
+            self.reset_interval = new_reset_interval
+
     @property
     def n_checks_for_reset(self) -> int:
-        return int(self.blocked_apps_reset_interval // self.blocked_apps_check_interval)
+        return int(self.reset_interval // self.check_interval)
 
     def act(self) -> None:
         """Kill any processes matching blocked app names and (every reset interval)
@@ -104,7 +124,7 @@ class AppBlocker:
                     proc.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
-        time.sleep(self.blocked_apps_check_interval)
+        time.sleep(self.check_interval)
         self.checks_since_last_reset += 1
         if self.checks_since_last_reset >= self.n_checks_for_reset:
             self._write_inactive_default_blocked_apps_to_file()

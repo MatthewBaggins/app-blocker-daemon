@@ -30,3 +30,10 @@ class Box[T]:
 
     def __bool__(self) -> bool:
         return bool(self.value)
+
+
+def format_float(x: float, *, max_digits_after_comma: int = 2) -> str:
+    s = str(x)
+    if (dot_loc := s.find(".")) == -1:
+        return s
+    return s[: dot_loc + max_digits_after_comma].rstrip("0").rstrip(".")

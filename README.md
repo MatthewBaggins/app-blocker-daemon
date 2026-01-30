@@ -18,8 +18,8 @@ For a site-blocking Chromium/Brave extension, see [site-blocker](https://github.
 Create a `.env` file in the project root with:
 
 ```env
-BLOCKED_APPS_CHECK_INTERVAL=1
-BLOCKED_APPS_RESET_INTERVAL=60
+CHECK_INTERVAL=1
+RESET_INTERVAL=60
 ```
 
 ### Blocked Apps
