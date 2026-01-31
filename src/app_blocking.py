@@ -27,8 +27,6 @@ class State(typ.NamedTuple):
 
     @classmethod
     def make(cls, *, last_state: State | None) -> State:
-        if not load_dotenv(override=True) and last_state is not None:
-            return last_state
         new_state = State(
             check_tick=_load_check_tick(),
             reset_tick=_load_reset_tick(),
