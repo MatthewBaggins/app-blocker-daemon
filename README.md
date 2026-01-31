@@ -4,48 +4,26 @@ A daemon for blocking applications on Ubuntu.
 
 For a site-blocking Chromium/Brave extension, see [site-blocker](https://github.com/MatthewBaggins/site-blocker).
 
-## Install etc
+## How it works
 
-(You need give the permission to each script to execute it this way via `chmod +x <script-name`>. Otherwise, you can execute them with bash: `bash <script-name>`.)
+- Every `CHECK_TICK` seconds (defined in `.env`), it reads `blocked_apps.json` and kills the apps that match the names listed in there. It also re-reads `.env` to update its values of `CHECK_TICK` and `RESET_TICK`.
+- Every `RESET_TICK` seconds (defined in `.env`), it resets `blocked_apps.json` to `default_blocked_apps.json`, *except* those apps listed in `default_blocked_apps.json` that are currently active.
+- Detailed logs of the app's behavior can be found in `logs/daemon.log`.
 
-- Install: `./install.sh` (this is the only one that needs to be executable for installation to work)
-- Uninstall: `./uninstall.sh`
-- Reinstall: `./reinstall.sh`
-- Reset `blocked_apps.json` (to default settings): `./reset_blocked_apps.sh`
-- View logs: `./logs.sh`
-- View status: `./status.sh`
+## Install and Manage
 
-## Configure
+Use the `manage.sh` script to install, uninstall, and manage the app. Ensure the script has execute permissions (`chmod +x manage.sh`) or run it with `bash`.
 
-### Environment Variables
+The most important commands are:
 
-Create a `.env` file in the project root with:
+- `./manage.sh install` (it will make the app start on every subsquent boot, until uninstalled)
+- `./manage.sh uninstall`
+- `./manage.sh reinstall`
+- `./manage.sh reset` - reset `blocked_apps.json` to `default_blocked_apps.json` (except for those apps in `default_blocked_apps.json` that are currently running)
 
-```env
-CHECK_TICK=1
-RESET_TICK=60
-```
+For more commands (perhaps somewhat helpful in debugging), see `./manage.sh help`.
 
-### Blocked Apps
-
-Edit `blocked_apps.json`:
-
-```json
-["app_name", "another_app"]
-```
-
-To find app process names: `ps aux | grep -i appname`
-
-Blocked apps file changes auto-reload while running.
-
-## Control
-
-- Start: `systemctl --user start app-blocker-daemon.service`
-- Stop: `systemctl --user stop app-blocker-daemon.service`
-- Status: `systemctl --user status app-blocker-daemon.service`
-- Logs: `journalctl --user -u app-blocker-daemon.service -f`
-
-## Manual Run
+### Alternative: Manual Run
 
 ```bash
 ./daemon.py
@@ -57,4 +35,40 @@ Or in background:
 nohup ./daemon.py
 ```
 
-`blocked_apps.json` is reset on every boot to the default defined in `reset_blocked_apps.sh`. It also resets every minute (except for the apps that are currently running).
+Or using python (sometimes useful for easy debugging):
+
+```python
+python daemon.py
+```
+
+## Configure
+
+### Environment Variables
+
+Create a `.env` file in the project root with:
+
+```bash
+CHECK_TICK=1 # the daemon loads the settings, kills apps that are being blocked, etc, every **second**
+RESET_TICK=300 # blocked_apps.json is reset to default_blocked_apps.json every 300 seconds = 5 minutes
+```
+
+Running `./manage.sh install` copies `.env.example` to `.env`.
+
+Not strictly necessary (the daemon has hard-coded fallback defaults equal to the ones shown above), but recommended.
+
+### Blocked Apps
+
+Edit `blocked_apps.json` and `default_blocked_apps.json`:
+
+```json
+[
+    "app_name", 
+    "another_app"
+]
+```
+
+`blocked_apps.json` is read every `CHECK_TICK` seconds. It is reset to `default_blocked_apps.json` (except the apps in the latter that are currently active) every `RESET_TICK` seconds.
+
+Running `./manage.sh install` copies `default_blocked_apps.json` to `blocked_apps.json`. If `default_blocked_apps.json` happens not to exist, for whatever reason, it is created to a list hard-coded in `./manage.sh`.
+
+To find app process names: `ps aux | grep -i appname`
