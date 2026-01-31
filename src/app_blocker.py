@@ -30,7 +30,7 @@ class AppBlocker:
         load_dotenv()
         logger = get_logger()
 
-        self.blocked_apps: set[str] = set()
+        self.blocked_apps: list[str] = []
         self.check_tick: float = _load_check_tick()
         self.reset_tick: float = _load_reset_tick()
         self.check_ticks_since_last_reset: int = 0
@@ -48,38 +48,47 @@ class AppBlocker:
         (3) The file exists but is malformatted.
         """
         logger = get_logger()
-        default_blocked_apps: list[str] = _load_default_blocked_apps()
+        default_blocked_apps: list[str] = _load_blocked_apps(
+            from_default=True, inactive_only=False
+        )
 
         # Branch 1: The file doesn't exist
         if not BLOCKED_APPS_PATH.exists():
-            self._write_to_blocked_apps_file(
+            self._write_inactive_to_blocked_apps_file(
                 default_blocked_apps,
             )
-            blocked_apps_from_file: set[str] = _load_inactive_blocked_apps_as_set()
+            all_blocked_apps_from_file = _load_blocked_apps(
+                from_default=False, inactive_only=False
+            )
         else:
             # Branch 2: The file exists and is wellf-formatted.
             try:
-                blocked_apps_from_file: set[str] = _load_inactive_blocked_apps_as_set()
+                all_blocked_apps_from_file = _load_blocked_apps(
+                    from_default=False, inactive_only=False
+                )
             # Branch 3: The file exists but is malformatted.
             except (json.JSONDecodeError, AssertionError) as e:
                 logger.error("Error reading blocked_apps.json: %s", e)
                 logger.info("Resetting blocked_apps.json to default settings.")
-                self._write_to_blocked_apps_file(default_blocked_apps)
-                blocked_apps_from_file: set[str] = _load_inactive_blocked_apps_as_set()
+                self._write_inactive_to_blocked_apps_file(default_blocked_apps)
+                all_blocked_apps_from_file = _load_blocked_apps(
+                    from_default=False, inactive_only=False
+                )
 
         if not on_init:
             # Check for changes in blocked apps
-            if blocked_apps_from_file != self.blocked_apps:
-                logger.info(
-                    "Added to blocked apps: %s",
-                    blocked_apps_from_file - self.blocked_apps,
-                )
-                logger.info(
-                    "Removed from blocked apps: %s",
-                    self.blocked_apps - blocked_apps_from_file,
-                )
+            if added_apps := set(all_blocked_apps_from_file).difference(
+                self.blocked_apps
+            ):
+                logger.info("Added to blocked apps: %s", added_apps)
+            if removed_apps := set(self.blocked_apps).difference(
+                all_blocked_apps_from_file
+            ):
+                logger.info("Removed from blocked apps: %s", removed_apps)
 
-        self.blocked_apps = blocked_apps_from_file
+        self.blocked_apps = [
+            app for app in all_blocked_apps_from_file if not _is_active_app(app)
+        ]
 
         logger.info(
             "Blocked apps %sloaded. Apps: %s",
@@ -95,7 +104,7 @@ class AppBlocker:
 
         if self.check_tick != (new_check_tick := _load_check_tick()):
             logger.info(
-                "check_tick changed from %s to %s",
+                "CHECK_TICK changed from %s to %s",
                 format_float(self.check_tick),
                 format_float(new_check_tick),
             )
@@ -103,7 +112,7 @@ class AppBlocker:
 
         if self.reset_tick != (new_reset_tick := _load_reset_tick()):
             logger.info(
-                "reset_tick changed from %s to %s",
+                "RESET_TICK changed from %s to %s",
                 format_float(self.reset_tick),
                 format_float(new_reset_tick),
             )
@@ -138,27 +147,28 @@ class AppBlocker:
 
         self.check_ticks_since_last_reset += 1
         if self.check_ticks_since_last_reset >= self.n_checks_for_reset:
-            self._write_inactive_default_blocked_apps_to_file()
+            self._add_inactive_default_blocked_apps_to_file()
             self.check_ticks_since_last_reset = 0
 
-    def _write_inactive_default_blocked_apps_to_file(self) -> None:
-        """Reset `blocked_app.json`, except for the apps that are currently active."""
+    def _add_inactive_default_blocked_apps_to_file(self) -> None:
+        """Write inactive apps from `default_blocked_apps.json` to `blocked_apps.json`."""
         logger = get_logger()
-        # Note: we don't have to filter for inactive apps here because this will be done in _write_to_blocked_apps_file
         new_blocked_apps: list[str] = sorted(
-            self.blocked_apps.union(_load_default_blocked_apps())
+            set(self.blocked_apps).union(
+                _load_blocked_apps(from_default=True, inactive_only=True)
+            )
         )
-        self._write_to_blocked_apps_file(new_blocked_apps)
-        logger.info("Reset blocked_apps.json to: %s", set(_load_blocked_apps()))
+        self._write_inactive_to_blocked_apps_file(new_blocked_apps)
+        logger.info("Reset blocked_apps.json to: %s", new_blocked_apps)
+
+    def _write_inactive_to_blocked_apps_file(self, blocked_apps: list[str]) -> None:
+        blocked_apps = sorted(app for app in blocked_apps if not _is_active_app(app))
+        with open(BLOCKED_APPS_PATH, "w", encoding="utf-8") as f:
+            json.dump(blocked_apps, f, indent=4)
 
     def _is_in_blocked_apps(self, name: str) -> bool:
         """Check if this name is in blocked apps."""
         return any(x in self.blocked_apps for x in [name, *name.split("-")])
-
-    def _write_to_blocked_apps_file(self, blocked_apps: list[str]) -> None:
-        blocked_apps = sorted(app for app in blocked_apps if not _is_active_app(app))
-        with open(BLOCKED_APPS_PATH, "w", encoding="utf-8") as f:
-            json.dump(blocked_apps, f, indent=4)
 
 
 def _is_active_app(app: str) -> bool:
@@ -197,17 +207,12 @@ def _is_active_app(app: str) -> bool:
     return False
 
 
-def _load_default_blocked_apps() -> list[str]:
-    """Returns all lowercase."""
-    return [app.lower() for app in load_json_list_of_strings(DEFAULT_BLOCKED_APPS_PATH)]
-
-
-def _load_blocked_apps() -> list[str]:
-    return [app.lower() for app in load_json_list_of_strings(BLOCKED_APPS_PATH)]
-
-
-def _load_inactive_blocked_apps_as_set() -> set[str]:
-    return {app for app in _load_blocked_apps() if not _is_active_app(app)}
+def _load_blocked_apps(*, from_default: bool, inactive_only: bool) -> list[str]:
+    file_path = DEFAULT_BLOCKED_APPS_PATH if from_default else BLOCKED_APPS_PATH
+    blocked_apps = sorted(app.lower() for app in load_json_list_of_strings(file_path))
+    if inactive_only:
+        return [app for app in blocked_apps if not _is_active_app(app)]
+    return blocked_apps
 
 
 def _load_check_tick() -> float:
