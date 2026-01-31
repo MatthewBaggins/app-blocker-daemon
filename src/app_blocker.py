@@ -5,7 +5,12 @@ import time
 from dotenv import load_dotenv
 import psutil
 
-from src.constants import BLOCKED_APPS_PATH, LOGS_DIR
+from src.constants import (
+    BLOCKED_APPS_PATH,
+    LOGS_DIR,
+    DEFAULT_CHECK_TICK,
+    DEFAULT_RESET_TICK,
+)
 from src.get_logger import get_logger
 from src.utils import is_list_of_strings, load_default_blocked_apps, format_float
 
@@ -25,8 +30,8 @@ class AppBlocker:
         logger = get_logger()
 
         self.blocked_apps: set[str] = set()
-        self.check_tick: float = float(os.environ["CHECK_TICK"])
-        self.reset_tick: float = float(os.environ["RESET_TICK"])
+        self.check_tick: float = float(os.environ.get("CHECK_TICK", DEFAULT_CHECK_TICK))
+        self.reset_tick: float = float(os.environ.get("RESET_TICK", DEFAULT_RESET_TICK))
         self.check_ticks_since_last_reset: int = 0
 
         logger.info("App Blocker started")
@@ -90,8 +95,9 @@ class AppBlocker:
 
     def reload_dotenv(self) -> None:
         """Reload the changes in the `.env` file."""
+        if not load_dotenv(override=True):
+            return
         logger = get_logger()
-        load_dotenv(override=True)
 
         if self.check_tick != (new_check_tick := float(os.environ["CHECK_TICK"])):
             logger.info(
