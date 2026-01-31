@@ -6,24 +6,24 @@ usage() {
 usage: $0 <command>
 
 commands:
-  install     install the app
-  uninstall   remove the app
-  reinstall   remove and install the app
-  reset       restore blocked_apps.json to default_blocked_apps.json
+  install              install the app
+  uninstall            remove the app
+  reinstall            remove and install the app
+  reset                restore blocked_apps.json to default_blocked_apps.json
 
-  start       start the app
-  stop        stop the app
-  restart     restart the app
-  status      show status
-  logs        show logs
-  help        show this message
+  start                start the app
+  stop                 stop the app
+  restart              restart the app
+  status               show status
+  logs | daemon-logs   show last 20 messages from daemon logs
+  service-logs         show service logs
+
+  help                 show this message
 EOF
 }
 
 
 install() {
-  set -e
-
   REPO_PATH=$(pwd)
   PYTHON_PATH=$(which python3)
 
@@ -95,7 +95,8 @@ case "$arg" in
   stop) systemctl --user stop app-blocker-daemon.service ;;
   restart) systemctl --user stop app-blocker-daemon.service && systemctl --user start app-blocker-daemon.service ;;
   status) systemctl --user status app-blocker-daemon.service ;;
-  logs) journalctl --user -u app-blocker-daemon.service -f ;;
+  logs|daemon-logs) cat logs/daemon.log | tail -n 20 ;;
+  service-logs) journalctl --user -u app-blocker-daemon.service -f ;;
   
   help|h|--help|-h) usage ;;
 
