@@ -112,19 +112,24 @@ class AppBlocker:
         Also, every reset interval reset `blocked_apps.json`.
         """
         if blocked_apps := _load_blocked_apps():
+            killed_apps = []
             for proc in psutil.process_iter(["name", "exe"]):
                 try:
                     proc_name = proc.info["name"]
                     exe_name = (
                         proc.info["exe"].split("/")[-1] if proc.info["exe"] else ""
                     )
-                    if self._is_in_blocked_apps(
-                        str(proc_name).lower().strip(), blocked_apps
-                    ) or self._is_in_blocked_apps(
-                        str(exe_name).lower().strip(), blocked_apps
+                    if proc_name not in killed_apps and (
+                        self._is_in_blocked_apps(
+                            str(proc_name).lower().strip(), blocked_apps
+                        )
+                        or self._is_in_blocked_apps(
+                            str(exe_name).lower().strip(), blocked_apps
+                        )
                     ):
                         self.logger.warning("Killing %r (PID %d)", proc_name, proc.pid)
                         proc.kill()
+                        killed_apps.append(proc_name)
 
                 except (
                     psutil.NoSuchProcess,
