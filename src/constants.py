@@ -9,3 +9,12 @@ DOTENV_PATH = REPO_PATH / ".env"
 
 DEFAULT_CHECK_TICK: float = 1.0  # 1 second
 DEFAULT_RESET_TICK: float = 300.0  # 5 minutes
+
+DEFAULT_DEFAULT_BLOCKED_APPS: list[str] = [
+    "brave",
+    "discord",
+    "firefox",
+    "signal",
+    "slack",
+    "steam",
+]
