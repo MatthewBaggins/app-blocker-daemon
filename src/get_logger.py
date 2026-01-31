@@ -2,7 +2,7 @@ import functools
 import logging
 from logging.handlers import RotatingFileHandler
 
-from src.constants import LOGS_DIR
+from src.constants import LOGS_DIR, LOGS_FILE
 
 
 @functools.lru_cache(maxsize=1)
@@ -17,7 +17,7 @@ def get_logger() -> logging.Logger:
 
     # Rotating file handler (max 5MB per file, keep 5 backups)
     handler = RotatingFileHandler(
-        LOGS_DIR / "daemon.log",
+        LOGS_FILE,
         maxBytes=5 * 1024 * 1024,  # 5MB
         backupCount=5,
     )
