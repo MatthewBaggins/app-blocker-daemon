@@ -21,6 +21,8 @@ from src.utils import load_json_list_of_strings, format_float
 
 
 class State(typ.NamedTuple):
+    """Represents the application state, including check and reset intervals, and blocked apps."""
+
     check_tick: float
     reset_tick: float
     blocked_apps: list[str]
@@ -85,6 +87,13 @@ def kill_blocked_apps() -> None:
 
 
 def _log_state_changes(last_state: State, new_state: State) -> None:
+    """
+    Logs the changes in state between the last and the new state.
+
+    This function compares two `State` objects and logs any differences
+    in their attributes. Specifically, it logs changes in `check_tick`,
+    `reset_tick`, and the differences in the `blocked_apps` list.
+    """
     if last_state.check_tick != new_state.check_tick:
         logger.info(
             "CHECK_TICK changed from %s to %s",
@@ -177,6 +186,13 @@ def _is_in_blocked_apps(app: str, blocked_apps: list[str]) -> bool:
 
 
 def _write_inactive_to_blocked_apps_file(new_blocked_apps: list[str]) -> None:
+    """
+    Writes a list of inactive blocked applications to a JSON file.
+
+    This function filters the provided list of applications to include only those
+    that are not currently active. The filtered list is then sorted and written
+    to a JSON file specified by the `BLOCKED_APPS_PATH` constant.
+    """
     inactive_new_blocked_apps = sorted(
         app for app in new_blocked_apps if not _is_active_app(app)
     )
@@ -220,10 +236,12 @@ def _is_active_app(app: str) -> bool:
 
 
 def _load_check_tick() -> float:
+    """Load CHECK_TICK from `.env`. If not found, return the `DEFAULT_CHECK_TICK` constant."""
     return float(os.environ.get("CHECK_TICK", DEFAULT_CHECK_TICK))
 
 
 def _load_reset_tick() -> float:
+    """Load RESET_TICK from `.env`. If not found, return the `DEFAULT_RESET_TICK` constant."""
     return float(os.environ.get("RESET_TICK", DEFAULT_RESET_TICK))
 
 
