@@ -48,14 +48,26 @@ class AppBlocker:
                 ]
             )
 
-        with open(BLOCKED_APPS_PATH, "r", encoding="utf-8") as f:
-            blocked_apps_from_file = json.load(f)
-            assert is_list_of_strings(blocked_apps_from_file)
-            blocked_apps_from_file = {
-                app.lower()
-                for app in blocked_apps_from_file
-                if not self._is_active_app(app.lower())
-            }
+        try:
+            with open(BLOCKED_APPS_PATH, "r", encoding="utf-8") as f:
+                blocked_apps_from_file = json.load(f)
+                assert is_list_of_strings(blocked_apps_from_file)
+                blocked_apps_from_file = {
+                    app.lower()
+                    for app in blocked_apps_from_file
+                    if not self._is_active_app(app.lower())
+                }
+        except (json.JSONDecodeError, AssertionError) as e:
+            logger.error("Error reading blocked_apps.json: %s", e)
+            logger.info("Resetting blocked_apps.json to default settings.")
+            self._write_to_blocked_apps_file(
+                [
+                    app.lower()
+                    for app in load_default_blocked_apps()
+                    if not self._is_active_app(app.lower())
+                ]
+            )
+            return
 
         if not on_init:
             # Check for changes in blocked apps
