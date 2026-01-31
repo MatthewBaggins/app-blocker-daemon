@@ -51,8 +51,8 @@ def reset_blocked_apps() -> None:
     new_blocked_apps = sorted(
         set(_load_blocked_apps()).union(_load_blocked_apps(default=True))
     )
-    _write_inactive_to_blocked_apps_file(new_blocked_apps)
-    logger.info("Reset blocked_apps.json to: %s", _load_blocked_apps())
+    blocked_apps = _write_inactive_to_blocked_apps_file(new_blocked_apps)
+    logger.info("Reset blocked_apps.json to: %s", blocked_apps)
 
 
 def kill_blocked_apps() -> None:
@@ -72,7 +72,6 @@ def kill_blocked_apps() -> None:
                     logger.warning("Killing %r (PID %d)", proc_name, proc.pid)
                     proc.kill()
                     killed_apps.append(proc_name)
-
             except (
                 psutil.NoSuchProcess,
                 psutil.AccessDenied,
@@ -143,10 +142,9 @@ def _load_default_blocked_apps_with_fallback() -> list[str]:
         )
         logger.info("Using hardcoded defaults.")
         logger.info("Writing default_blocked_apps.json using hardcoded defaults.")
-        default_blocked_apps = DEFAULT_DEFAULT_BLOCKED_APPS.copy()
         with open(DEFAULT_BLOCKED_APPS_PATH, "w", encoding="utf-8") as f:
-            json.dump(default_blocked_apps, f)
-        return sorted(app.lower() for app in default_blocked_apps)
+            json.dump(DEFAULT_DEFAULT_BLOCKED_APPS, f)
+        return sorted(app.lower() for app in DEFAULT_DEFAULT_BLOCKED_APPS)
 
 
 def _load_user_blocked_apps_with_fallback(default_blocked_apps: list[str]) -> list[str]:
@@ -156,8 +154,7 @@ def _load_user_blocked_apps_with_fallback(default_blocked_apps: list[str]) -> li
         logger.warning(
             "blocked_apps.json not found; creating from default_blocked_apps.json"
         )
-        _write_inactive_to_blocked_apps_file(default_blocked_apps)
-        return _load_from_file(BLOCKED_APPS_PATH)
+        return _write_inactive_to_blocked_apps_file(default_blocked_apps)
 
     # File exists: try to load it
     try:
@@ -165,8 +162,7 @@ def _load_user_blocked_apps_with_fallback(default_blocked_apps: list[str]) -> li
     except (json.JSONDecodeError, AssertionError) as e:
         logger.error("Error reading blocked_apps.json: %s", e)
         logger.warning("Resetting blocked_apps.json to default settings.")
-        _write_inactive_to_blocked_apps_file(default_blocked_apps)
-        return _load_from_file(BLOCKED_APPS_PATH)
+        return _write_inactive_to_blocked_apps_file(default_blocked_apps)
 
 
 def _is_in_blocked_apps(app: str, blocked_apps: list[str]) -> bool:
@@ -185,19 +181,22 @@ def _is_in_blocked_apps(app: str, blocked_apps: list[str]) -> bool:
     return False
 
 
-def _write_inactive_to_blocked_apps_file(new_blocked_apps: list[str]) -> None:
+def _write_inactive_to_blocked_apps_file(new_blocked_apps: list[str]) -> list[str]:
     """
     Writes a list of inactive blocked applications to a JSON file.
 
     This function filters the provided list of applications to include only those
     that are not currently active. The filtered list is then sorted and written
     to a JSON file specified by the `BLOCKED_APPS_PATH` constant.
+
+    Returns the apps that were written.
     """
     inactive_new_blocked_apps = sorted(
         app for app in new_blocked_apps if not _is_active_app(app)
     )
     with open(BLOCKED_APPS_PATH, "w", encoding="utf-8") as f:
         json.dump(inactive_new_blocked_apps, f, indent=4)
+    return inactive_new_blocked_apps
 
 
 def _is_active_app(app: str) -> bool:
