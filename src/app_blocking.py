@@ -38,9 +38,13 @@ class State(typ.NamedTuple):
         if last_state is None:
             logger.info("App Blocker started")
             logger.info("Default blocked apps file: %s", DEFAULT_BLOCKED_APPS_PATH)
+            logger.info("\tdefault_blocked_apps=%s", _load_blocked_apps(default=True))
             logger.info("Blocked apps file: %s", BLOCKED_APPS_PATH)
             logger.info("Logs file: %s", LOGS_FILE)
-            logger.info("State: %s", new_state)
+            logger.info("State:")
+            logger.info("\tcheck_tick=%s", format_float(new_state.check_tick))
+            logger.info("\treset_tick=%s", format_float(new_state.reset_tick))
+            logger.info("\tblocked_apps=%s", new_state.blocked_apps)
         elif last_state != new_state:
             _log_state_changes(last_state=last_state, new_state=new_state)
         return new_state
@@ -52,7 +56,7 @@ def reset_blocked_apps() -> None:
         set(_load_blocked_apps()).union(_load_blocked_apps(default=True))
     )
     blocked_apps = _write_inactive_to_blocked_apps_file(new_blocked_apps)
-    logger.info("Reset blocked_apps.json to: %s", blocked_apps)
+    logger.info("blocked_apps.json was reset to: %s", blocked_apps)
 
 
 def kill_blocked_apps() -> None:
@@ -201,8 +205,6 @@ def _write_inactive_to_blocked_apps_file(new_blocked_apps: list[str]) -> list[st
 
 def _is_active_app(app: str) -> bool:
     """Check if the app is currently active."""
-    logger.info("Checking if app %r is active", app)
-
     for proc in psutil.process_iter(["name", "exe"]):
         try:
             proc_name = proc.info["name"]
@@ -210,7 +212,7 @@ def _is_active_app(app: str) -> bool:
 
             if app.lower() in [str(proc_name).lower(), str(exe_name).lower()]:
                 logger.info(
-                    "Found exact match: %r (proc_name=%r, exe_name=%r)",
+                    "Found exact match: %r is active (proc_name=%r, exe_name=%r)",
                     app,
                     proc_name,
                     exe_name,
@@ -220,7 +222,7 @@ def _is_active_app(app: str) -> bool:
             # Check if app is a substring (e.g., "signal" in "signal-desktop")
             if app.lower() in f"{proc_name}-{exe_name}".lower().strip().split("-"):
                 logger.info(
-                    "Found substring match: %r (proc_name=%r, exe_name=%r)",
+                    "Found substring match: %r is active (proc_name=%r, exe_name=%r)",
                     app,
                     proc_name,
                     exe_name,
@@ -229,8 +231,6 @@ def _is_active_app(app: str) -> bool:
 
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
-
-    logger.info("App %r is not active", app)
     return False
 
 
