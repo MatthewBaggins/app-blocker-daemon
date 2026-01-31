@@ -35,14 +35,14 @@ class State(typ.NamedTuple):
             reset_tick=_load_reset_tick(),
             blocked_apps=_load_blocked_apps(),
         )
-        if last_state is not None and last_state != new_state:
-            _log_state_changes(last_state=last_state, new_state=new_state)
         if last_state is None:
             logger.info("App Blocker started")
             logger.info("Default blocked apps file: %s", DEFAULT_BLOCKED_APPS_PATH)
             logger.info("Blocked apps file: %s", BLOCKED_APPS_PATH)
             logger.info("Logs file: %s", LOGS_FILE)
             logger.info("State: %s", new_state)
+        elif last_state != new_state:
+            _log_state_changes(last_state=last_state, new_state=new_state)
         return new_state
 
 
