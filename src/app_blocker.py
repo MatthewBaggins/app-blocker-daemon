@@ -17,7 +17,7 @@ class AppBlocker:
         "blocked_apps",
         "check_tick",
         "reset_tick",
-        "checks_since_last_reset",
+        "check_ticks_since_last_reset",
     )
 
     def __init__(self) -> None:
@@ -27,7 +27,7 @@ class AppBlocker:
         self.blocked_apps: set[str] = set()
         self.check_tick: float = float(os.environ["CHECK_TICK"])
         self.reset_tick: float = float(os.environ["RESET_TICK"])
-        self.checks_since_last_reset: int = 0
+        self.check_ticks_since_last_reset: int = 0
 
         logger.info("App Blocker started")
         logger.info("Blocked apps file: %r", BLOCKED_APPS_PATH)
@@ -133,10 +133,10 @@ class AppBlocker:
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
         time.sleep(self.check_tick)
-        self.checks_since_last_reset += 1
-        if self.checks_since_last_reset >= self.n_checks_for_reset:
+        self.check_ticks_since_last_reset += 1
+        if self.check_ticks_since_last_reset >= self.n_checks_for_reset:
             self._write_inactive_default_blocked_apps_to_file()
-            self.checks_since_last_reset = 0
+            self.check_ticks_since_last_reset = 0
 
     def _write_inactive_default_blocked_apps_to_file(self) -> None:
         """Reset `blocked_app.json`, except for the apps that are currently active."""
