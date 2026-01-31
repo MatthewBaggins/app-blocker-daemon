@@ -16,7 +16,7 @@ from src.constants import (
     DEFAULT_DEFAULT_BLOCKED_APPS,
     LOGS_FILE,
 )
-from src.get_logger import get_logger
+from src.logger import logger
 from src.utils import load_json_list_of_strings, format_float
 
 
@@ -36,7 +36,6 @@ class State(typ.NamedTuple):
         if last_state is not None and last_state != new_state:
             _log_state_changes(last_state=last_state, new_state=new_state)
         if last_state is None:
-            logger = get_logger()
             logger.info("App Blocker started")
             logger.info("Default blocked apps file: %s", DEFAULT_BLOCKED_APPS_PATH)
             logger.info("Blocked apps file: %s", BLOCKED_APPS_PATH)
@@ -47,7 +46,6 @@ class State(typ.NamedTuple):
 
 def reset_blocked_apps() -> None:
     """Write inactive apps from `default_blocked_apps.json` to `blocked_apps.json`."""
-    logger = get_logger()
     new_blocked_apps = sorted(
         set(_load_blocked_apps()).union(_load_blocked_apps(default=True))
     )
@@ -60,7 +58,6 @@ def kill_blocked_apps() -> None:
     Also, every reset interval reset `blocked_apps.json`.
     """
     if blocked_apps := _load_blocked_apps():
-        logger = get_logger()
         killed_apps = []
         for proc in psutil.process_iter(["name", "exe"]):
             try:
@@ -88,7 +85,6 @@ def kill_blocked_apps() -> None:
 
 
 def _log_state_changes(last_state: State, new_state: State) -> None:
-    logger = get_logger()
     if last_state.check_tick != new_state.check_tick:
         logger.info(
             "CHECK_TICK changed from %s to %s",
@@ -132,7 +128,6 @@ def _load_default_blocked_apps_with_fallback() -> list[str]:
             app.lower() for app in load_json_list_of_strings(DEFAULT_BLOCKED_APPS_PATH)
         )
     except (json.JSONDecodeError, AssertionError, FileNotFoundError) as e:
-        logger = get_logger()
         logger.error(
             "Error loading default_blocked_apps.json: %s.",
             e,
@@ -148,7 +143,6 @@ def _load_default_blocked_apps_with_fallback() -> list[str]:
 def _load_user_blocked_apps_with_fallback(default_blocked_apps: list[str]) -> list[str]:
     """Load user blocked apps, creating from defaults if missing or resetting if corrupt."""
     # File doesn't exist: create from defaults
-    logger = get_logger()
     if not BLOCKED_APPS_PATH.exists():
         logger.warning(
             "blocked_apps.json not found; creating from default_blocked_apps.json"
@@ -170,7 +164,6 @@ def _is_in_blocked_apps(app: str, blocked_apps: list[str]) -> bool:
     """Check if this name is in blocked apps."""
     if not app:
         return False
-    logger = get_logger()
     app_substrings = app.split("-")
     for blocked_app in blocked_apps:
         if blocked_app == app:
@@ -193,7 +186,6 @@ def _write_inactive_to_blocked_apps_file(new_blocked_apps: list[str]) -> None:
 
 def _is_active_app(app: str) -> bool:
     """Check if the app is currently active."""
-    logger = get_logger()
     logger.info("Checking if app %r is active", app)
 
     for proc in psutil.process_iter(["name", "exe"]):

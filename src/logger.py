@@ -1,12 +1,10 @@
-import functools
 import logging
 from logging.handlers import RotatingFileHandler
 
 from src.constants import LOGS_DIR, LOGS_FILE
 
 
-@functools.lru_cache(maxsize=1)
-def get_logger() -> logging.Logger:
+def _get_logger() -> logging.Logger:
     """Get the logger."""
     # Create logs directory if it doesn't exist
     LOGS_DIR.mkdir(exist_ok=True)
@@ -29,3 +27,6 @@ def get_logger() -> logging.Logger:
     )
     logger.addHandler(handler)
     return logger
+
+
+logger = _get_logger()
