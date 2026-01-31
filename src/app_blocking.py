@@ -10,11 +10,11 @@ import psutil
 
 from src.constants import (
     BLOCKED_APPS_PATH,
-    DEFAULT_BLOCKED_APPS_PATH,
     DEFAULT_CHECK_TICK,
     DEFAULT_RESET_TICK,
-    LOGS_FILE,
+    DEFAULT_BLOCKED_APPS_PATH,
     DEFAULT_DEFAULT_BLOCKED_APPS,
+    LOGS_FILE,
 )
 from src.get_logger import get_logger
 from src.utils import load_json_list_of_strings, format_float
