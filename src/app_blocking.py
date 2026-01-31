@@ -27,6 +27,7 @@ class State(typ.NamedTuple):
 
     @classmethod
     def make(cls, *, last_state: State | None) -> State:
+        load_dotenv(override=True)
         new_state = State(
             check_tick=_load_check_tick(),
             reset_tick=_load_reset_tick(),
@@ -114,8 +115,6 @@ def _load_blocked_apps(*, default: bool = False) -> list[str]:
     """Load and return a sorted list of blocked apps from the appropriate file.
     Handles file not found, JSON decode errors, and format errors gracefully.
     """
-    logger = get_logger()
-
     # Always load default blocked apps first
     default_blocked_apps = _load_default_blocked_apps_with_fallback()
 
