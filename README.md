@@ -6,10 +6,14 @@ For a site-blocking Chromium/Brave extension, see [site-blocker](https://github.
 
 ## Install etc
 
-- Install: `./install.sh`
+(You need give the permission to each script to execute it this way via `chmod +x <script-name`>. Otherwise, you can execute them with bash: `bash <script-name>`.)
+
+- Install: `./install.sh` (this is the only one that needs to be executable for installation to work)
 - Uninstall: `./uninstall.sh`
 - Reinstall: `./reinstall.sh`
 - Reset `blocked_apps.json` (to default settings): `./reset_blocked_apps.sh`
+- View logs: `./logs.sh`
+- View status: `./status.sh`
 
 ## Configure
 
@@ -18,8 +22,8 @@ For a site-blocking Chromium/Brave extension, see [site-blocker](https://github.
 Create a `.env` file in the project root with:
 
 ```env
-CHECK_INTERVAL=1
-RESET_INTERVAL=60
+CHECK_TICK=1
+RESET_TICK=60
 ```
 
 ### Blocked Apps

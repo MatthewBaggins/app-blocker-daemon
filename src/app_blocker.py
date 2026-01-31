@@ -15,8 +15,8 @@ class AppBlocker:
 
     __slots__ = (
         "blocked_apps",
-        "check_interval",
-        "reset_interval",
+        "check_tick",
+        "reset_tick",
         "checks_since_last_reset",
     )
 
@@ -25,8 +25,8 @@ class AppBlocker:
         logger = get_logger()
 
         self.blocked_apps: set[str] = set()
-        self.check_interval: float = float(os.environ["CHECK_INTERVAL"])
-        self.reset_interval: float = float(os.environ["RESET_INTERVAL"])
+        self.check_tick: float = float(os.environ["CHECK_TICK"])
+        self.reset_tick: float = float(os.environ["RESET_TICK"])
         self.checks_since_last_reset: int = 0
 
         logger.info("App Blocker started")
@@ -77,33 +77,29 @@ class AppBlocker:
         )
 
     def reload_dotenv(self) -> None:
-        # Check for changes in .env
+        """Reload the changes in the `.env` file."""
         logger = get_logger()
         load_dotenv(override=True)
 
-        if self.check_interval != (
-            new_check_interval := float(os.environ["CHECK_INTERVAL"])
-        ):
+        if self.check_tick != (new_check_tick := float(os.environ["CHECK_TICK"])):
             logger.info(
-                "check_interval changed from %s to %s",
-                format_float(self.check_interval),
-                format_float(new_check_interval),
+                "check_tick changed from %s to %s",
+                format_float(self.check_tick),
+                format_float(new_check_tick),
             )
-            self.check_interval = new_check_interval
+            self.check_tick = new_check_tick
 
-        if self.reset_interval != (
-            new_reset_interval := float(os.environ["RESET_INTERVAL"])
-        ):
+        if self.reset_tick != (new_reset_tick := float(os.environ["RESET_TICK"])):
             logger.info(
-                "reset_interval changed from %s to %s",
-                format_float(self.reset_interval),
-                format_float(new_reset_interval),
+                "reset_tick changed from %s to %s",
+                format_float(self.reset_tick),
+                format_float(new_reset_tick),
             )
-            self.reset_interval = new_reset_interval
+            self.reset_tick = new_reset_tick
 
     @property
     def n_checks_for_reset(self) -> int:
-        return int(self.reset_interval // self.check_interval)
+        return int(self.reset_tick // self.check_tick)
 
     def act(self) -> None:
         """Kill any processes matching blocked app names and (every reset interval)
@@ -124,7 +120,7 @@ class AppBlocker:
                     proc.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
-        time.sleep(self.check_interval)
+        time.sleep(self.check_tick)
         self.checks_since_last_reset += 1
         if self.checks_since_last_reset >= self.n_checks_for_reset:
             self._write_inactive_default_blocked_apps_to_file()
@@ -172,8 +168,8 @@ class AppBlocker:
                     return True
 
                 # Check if app is a substring (e.g., "signal" in "signal-desktop")
-                if app.lower() in (
-                    str(proc_name).lower().split("-") + str(exe_name).lower().split("-")
+                if app.lower() in (str(proc_name) + "-" + str(exe_name)).lower().split(
+                    "-"
                 ):
                     logger.info(
                         "Found substring match: %r (proc_name=%r, exe_name=%r)",
