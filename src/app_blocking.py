@@ -158,9 +158,9 @@ def _load_default_blocked_apps_with_fallback() -> list[str]:
             app.lower() for app in load_json_list_of_strings(DEFAULT_BLOCKED_APPS_PATH)
         )
     except (json.JSONDecodeError, AssertionError, FileNotFoundError) as e:
-        logger.error("Error loading default_blocked_apps.json: %s.", e)
-        logger.info("Using hardcoded defaults.")
-        logger.info("Writing default_blocked_apps.json using hardcoded defaults.")
+        logger.error("Error loading default_blocked_apps.json: %s", e)
+        logger.info("Using hardcoded defaults")
+        logger.info("Writing default_blocked_apps.json using hardcoded defaults")
         with open(DEFAULT_BLOCKED_APPS_PATH, "w", encoding="utf-8") as f:
             json.dump(DEFAULT_DEFAULT_BLOCKED_APPS, f)
         return sorted(app.lower() for app in DEFAULT_DEFAULT_BLOCKED_APPS)
@@ -180,7 +180,7 @@ def _load_user_blocked_apps_with_fallback(default_blocked_apps: list[str]) -> li
         return _load_from_file(BLOCKED_APPS_PATH)
     except (json.JSONDecodeError, AssertionError) as e:
         logger.error("Error reading blocked_apps.json: %s", e)
-        logger.warning("Resetting blocked_apps.json to default settings.")
+        logger.warning("Resetting blocked_apps.json to default settings")
         return _write_inactive_to_blocked_apps_file(default_blocked_apps)
 
 
