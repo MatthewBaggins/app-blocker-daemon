@@ -44,10 +44,10 @@ class State:
         any_changes = self._log_state_changes(
             new_check_tick, new_reset_tick, new_blocked_apps
         )
-        self.check_tick = new_check_tick
-        self.reset_tick = new_reset_tick
-        self.blocked_apps = new_blocked_apps
         if any_changes:
+            self.check_tick = new_check_tick
+            self.reset_tick = new_reset_tick
+            self.blocked_apps = new_blocked_apps
             self._log_state_info()
 
     def _log_state_changes(
@@ -158,10 +158,7 @@ def _load_default_blocked_apps_with_fallback() -> list[str]:
             app.lower() for app in load_json_list_of_strings(DEFAULT_BLOCKED_APPS_PATH)
         )
     except (json.JSONDecodeError, AssertionError, FileNotFoundError) as e:
-        logger.error(
-            "Error loading default_blocked_apps.json: %s.",
-            e,
-        )
+        logger.error("Error loading default_blocked_apps.json: %s.", e)
         logger.info("Using hardcoded defaults.")
         logger.info("Writing default_blocked_apps.json using hardcoded defaults.")
         with open(DEFAULT_BLOCKED_APPS_PATH, "w", encoding="utf-8") as f:
