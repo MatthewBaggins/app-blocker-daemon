@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-import pathlib
+import typing as typ
 
 from dotenv import load_dotenv
 import psutil
@@ -32,7 +32,7 @@ class State:
         load_dotenv()
         self.check_tick: float = _load_check_tick()
         self.reset_tick: float = _load_reset_tick()
-        self.blocked_apps: list[str] = _load_blocked_apps()
+        self.blocked_apps: list[str] = _load_blocked_apps("user")
         self._log_init_info()
         self._log_state_info()
 
@@ -40,7 +40,7 @@ class State:
         load_dotenv(override=True)
         new_check_tick = _load_check_tick()
         new_reset_tick = _load_reset_tick()
-        new_blocked_apps = _load_blocked_apps()
+        new_blocked_apps = _load_blocked_apps("user")
         any_changes = self._log_state_changes(
             new_check_tick, new_reset_tick, new_blocked_apps
         )
@@ -87,7 +87,7 @@ class State:
     def _log_init_info(self) -> None:
         logger.info("App Blocker started")
         logger.info("Default blocked apps file: %s", DEFAULT_BLOCKED_APPS_PATH)
-        logger.info("\tdefault_blocked_apps=%s", _load_blocked_apps(default=True))
+        logger.info("\tdefault_blocked_apps=%s", _load_blocked_apps("default"))
         logger.info("Blocked apps file: %s", BLOCKED_APPS_PATH)
         logger.info("Logs file: %s", LOGS_FILE_PATH)
 
@@ -101,7 +101,7 @@ class State:
 def reset_blocked_apps() -> None:
     """Write inactive apps from `default_blocked_apps.json` to `blocked_apps.json`."""
     new_blocked_apps = sorted(
-        set(_load_blocked_apps()).union(_load_blocked_apps(default=True))
+        set(_load_blocked_apps("user")).union(_load_blocked_apps("default"))
     )
     blocked_apps = _write_inactive_to_blocked_apps_file(new_blocked_apps)
     logger.info("blocked_apps.json was reset to: %s", blocked_apps)
@@ -111,7 +111,7 @@ def kill_blocked_apps() -> None:
     """Kill any processes matching names of blocked apps.
     Also, every reset interval reset `blocked_apps.json`.
     """
-    if blocked_apps := _load_blocked_apps():
+    if blocked_apps := _load_blocked_apps("user"):
         killed_apps = []
         for proc in psutil.process_iter(["name", "exe"]):
             try:
@@ -136,34 +136,35 @@ def kill_blocked_apps() -> None:
 #    "Private" functions    #
 #############################
 
+BlockedAppsFileType = typ.Literal["user", "default"]
 
-def _load_blocked_apps(*, default: bool = False) -> list[str]:
+
+def _load_blocked_apps(filetype: BlockedAppsFileType, /) -> list[str]:
     """Load and return a sorted list of blocked apps from the appropriate file.
     Handles file not found, JSON decode errors, and format errors gracefully.
     """
     # Always load default blocked apps first
     default_blocked_apps = _load_default_blocked_apps_with_fallback()
 
-    if default:
-        return default_blocked_apps
-
-    # Load user blocked apps
-    return _load_user_blocked_apps_with_fallback(default_blocked_apps)
+    match filetype:
+        case "default":
+            return default_blocked_apps
+        case "user":
+            # Load user blocked apps
+            return _load_user_blocked_apps_with_fallback(default_blocked_apps)
 
 
 def _load_default_blocked_apps_with_fallback() -> list[str]:
     """Load default blocked apps, with fallback to hardcoded defaults if file is corrupt."""
     try:
-        return sorted(
-            app.lower() for app in load_json_list_of_strings(DEFAULT_BLOCKED_APPS_PATH)
-        )
+        return _load_blocked_apps_from_file("default")
     except (json.JSONDecodeError, AssertionError, FileNotFoundError) as e:
         logger.error("Error loading default_blocked_apps.json: %s", e)
         logger.info("Using hardcoded defaults")
         logger.info("Writing default_blocked_apps.json using hardcoded defaults")
         with open(DEFAULT_BLOCKED_APPS_PATH, "w", encoding="utf-8") as f:
             json.dump(DEFAULT_DEFAULT_BLOCKED_APPS, f)
-        return sorted(app.lower() for app in DEFAULT_DEFAULT_BLOCKED_APPS)
+        return _load_blocked_apps_from_file("default")
 
 
 def _load_user_blocked_apps_with_fallback(default_blocked_apps: list[str]) -> list[str]:
@@ -177,7 +178,7 @@ def _load_user_blocked_apps_with_fallback(default_blocked_apps: list[str]) -> li
 
     # File exists: try to load it
     try:
-        return _load_from_file(BLOCKED_APPS_PATH)
+        return _load_blocked_apps_from_file("user")
     except (json.JSONDecodeError, AssertionError) as e:
         logger.error("Error reading blocked_apps.json: %s", e)
         logger.warning("Resetting blocked_apps.json to default settings")
@@ -257,6 +258,11 @@ def _load_reset_tick() -> float:
     return float(os.environ.get("RESET_TICK", DEFAULT_RESET_TICK))
 
 
-def _load_from_file(file_path: pathlib.Path) -> list[str]:
+def _load_blocked_apps_from_file(mode: BlockedAppsFileType, /) -> list[str]:
     """Load and sort apps from a JSON file."""
+    match mode:
+        case "default":
+            file_path = DEFAULT_BLOCKED_APPS_PATH
+        case "user":
+            file_path = BLOCKED_APPS_PATH
     return sorted(app.lower() for app in load_json_list_of_strings(file_path))
