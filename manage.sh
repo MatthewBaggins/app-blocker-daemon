@@ -69,13 +69,6 @@ EOF
 
 }
 
-if [[ $# -ne 1 ]]; then
-  echo "usage: $0 <mode>" >&2
-  exit 1
-fi
-
-arg="$1"
-
 uninstall() {
   echo "Uninstalling App Blocker Daemon..."
   systemctl --user stop app-blocker-daemon.service
@@ -84,6 +77,13 @@ uninstall() {
   systemctl --user daemon-reload
   echo "Uninstallation complete!"
 }
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: $0 <mode>" >&2
+  exit 1
+fi
+
+arg="$1"
 
 case "$arg" in
   install) install ;;
