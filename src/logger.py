@@ -19,6 +19,8 @@ def _get_logger() -> logging.Logger:
         maxBytes=5 * 1024 * 1024,  # 5MB
         backupCount=5,
     )
+
+    # Formatting: [<date> <time> - <level> - <message>]
     handler.setFormatter(
         logging.Formatter(
             "%(asctime)s - %(levelname)s - %(message)s",

@@ -243,7 +243,6 @@ def _is_active_app(app: str) -> bool:
                     exe_name,
                 )
                 return True
-
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
     return False

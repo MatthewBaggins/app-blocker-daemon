@@ -20,4 +20,5 @@ def make_running_flag() -> Box[bool]:
 
     signal.signal(signal.SIGINT, handler)
     signal.signal(signal.SIGTERM, handler)
+
     return running_flag
