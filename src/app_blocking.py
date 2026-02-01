@@ -13,7 +13,7 @@ from src.constants import (
     DEFAULT_RESET_TICK,
     DEFAULT_BLOCKED_APPS_PATH,
     DEFAULT_DEFAULT_BLOCKED_APPS,
-    LOGS_FILE,
+    LOGS_FILE_PATH,
 )
 from src.logger import logger
 from src.utils import load_json_list_of_strings, format_float
@@ -89,7 +89,7 @@ class State:
         logger.info("Default blocked apps file: %s", DEFAULT_BLOCKED_APPS_PATH)
         logger.info("\tdefault_blocked_apps=%s", _load_blocked_apps(default=True))
         logger.info("Blocked apps file: %s", BLOCKED_APPS_PATH)
-        logger.info("Logs file: %s", LOGS_FILE)
+        logger.info("Logs file: %s", LOGS_FILE_PATH)
 
     def _log_state_info(self) -> None:
         logger.info("State:")

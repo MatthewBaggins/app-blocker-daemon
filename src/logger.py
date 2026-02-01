@@ -1,13 +1,13 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from src.constants import LOGS_DIR, LOGS_FILE
+from src.constants import LOGS_DIR_PATH, LOGS_FILE_PATH
 
 
 def _get_logger() -> logging.Logger:
     """Get the logger."""
     # Create logs directory if it doesn't exist
-    LOGS_DIR.mkdir(exist_ok=True)
+    LOGS_DIR_PATH.mkdir(exist_ok=True)
 
     # Set up logging
     logger = logging.getLogger("AppBlocker")
@@ -15,7 +15,7 @@ def _get_logger() -> logging.Logger:
 
     # Rotating file handler (max 5MB per file, keep 5 backups)
     handler = RotatingFileHandler(
-        LOGS_FILE,
+        LOGS_FILE_PATH,
         maxBytes=5 * 1024 * 1024,  # 5MB
         backupCount=5,
     )
