@@ -37,52 +37,47 @@ class State:
         self._log_state_info()
 
     def update(self) -> None:
-        load_dotenv(override=True)
-        new_check_tick = _load_check_tick()
-        new_reset_tick = _load_reset_tick()
-        new_blocked_apps = _load_blocked_apps("user")
-        any_changes = self._log_state_changes(
-            new_check_tick, new_reset_tick, new_blocked_apps
-        )
-        if any_changes:
-            self.check_tick = new_check_tick
-            self.reset_tick = new_reset_tick
-            self.blocked_apps = new_blocked_apps
-            self._log_state_info()
-
-    def _log_state_changes(
-        self, new_check_tick: float, new_reset_tick: float, new_blocked_apps: list[str]
-    ) -> bool:
-        """Logs the changes in state between the last and the new state.
-
-        This function compares two `State` objects and logs any differences
-        in their attributes. Specifically, it logs changes in `check_tick`,
-        `reset_tick`, and the differences in the `blocked_apps` list.
-
-        Returns `True` if any changes were found, `False` otherwise.
-        """
+        """Updates the state object's fields to new values and logs the changes."""
         any_changes: bool = False
-        if self.check_tick != new_check_tick:
+
+        # Environmental variables
+        load_dotenv(override=True)
+        if self.check_tick != (new_check_tick := _load_check_tick()):
             logger.info(
                 "CHECK_TICK changed from %s to %s",
                 format_float(self.check_tick),
                 format_float(new_check_tick),
             )
+            self.check_tick = new_check_tick
             any_changes = True
-        if self.reset_tick != new_reset_tick:
+        if self.reset_tick != (new_reset_tick := _load_reset_tick()):
             logger.info(
                 "RESET_TICK changed from %s to %s",
                 format_float(self.reset_tick),
                 format_float(new_reset_tick),
             )
+            self.reset_tick = new_reset_tick
             any_changes = True
+
+        # Blocked apps
+        new_blocked_apps = _load_blocked_apps("user")
         if added_apps := sorted(set(new_blocked_apps).difference(self.blocked_apps)):
             logger.info("Added to blocked apps: %s", added_apps)
-            any_changes = True
         if removed_apps := sorted(set(self.blocked_apps).difference(new_blocked_apps)):
             logger.info("Removed from blocked apps: %s", removed_apps)
+        if added_apps or removed_apps:
+            logger.info(
+                "Blocked apps changed from %s to %s",
+                self.blocked_apps,
+                new_blocked_apps,
+            )
+            self.blocked_apps.clear()
+            self.blocked_apps.extend(new_blocked_apps)
             any_changes = True
-        return any_changes
+
+        # Log changes if any
+        if any_changes:
+            self._log_state_info()
 
     def _log_init_info(self) -> None:
         logger.info("App Blocker started")
