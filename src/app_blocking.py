@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import pathlib
-import typing as typ
 
 from dotenv import load_dotenv
 import psutil
@@ -20,34 +19,83 @@ from src.logger import logger
 from src.utils import load_json_list_of_strings, format_float
 
 
-class State(typ.NamedTuple):
+class State:
     """Represents the application state, including check and reset intervals, and blocked apps."""
 
-    check_tick: float
-    reset_tick: float
-    blocked_apps: list[str]
+    __slots__ = (
+        "check_tick",
+        "reset_tick",
+        "blocked_apps",
+    )
 
-    @classmethod
-    def make(cls, *, last_state: State | None) -> State:
+    def __init__(self) -> None:
+        load_dotenv()
+        self.check_tick: float = _load_check_tick()
+        self.reset_tick: float = _load_reset_tick()
+        self.blocked_apps: list[str] = _load_blocked_apps()
+        self._log_init_info()
+        self._log_state_info()
+
+    def update(self) -> None:
         load_dotenv(override=True)
-        new_state = State(
-            check_tick=_load_check_tick(),
-            reset_tick=_load_reset_tick(),
-            blocked_apps=_load_blocked_apps(),
+        new_check_tick = _load_check_tick()
+        new_reset_tick = _load_reset_tick()
+        new_blocked_apps = _load_blocked_apps()
+        any_changes = self._log_state_changes(
+            new_check_tick, new_reset_tick, new_blocked_apps
         )
-        if last_state is None:
-            logger.info("App Blocker started")
-            logger.info("Default blocked apps file: %s", DEFAULT_BLOCKED_APPS_PATH)
-            logger.info("\tdefault_blocked_apps=%s", _load_blocked_apps(default=True))
-            logger.info("Blocked apps file: %s", BLOCKED_APPS_PATH)
-            logger.info("Logs file: %s", LOGS_FILE)
-            logger.info("State:")
-            logger.info("\tcheck_tick=%s", format_float(new_state.check_tick))
-            logger.info("\treset_tick=%s", format_float(new_state.reset_tick))
-            logger.info("\tblocked_apps=%s", new_state.blocked_apps)
-        elif last_state != new_state:
-            _log_state_changes(last_state=last_state, new_state=new_state)
-        return new_state
+        self.check_tick = new_check_tick
+        self.reset_tick = new_reset_tick
+        self.blocked_apps = new_blocked_apps
+        if any_changes:
+            self._log_state_info()
+
+    def _log_state_changes(
+        self, new_check_tick: float, new_reset_tick: float, new_blocked_apps: list[str]
+    ) -> bool:
+        """Logs the changes in state between the last and the new state.
+
+        This function compares two `State` objects and logs any differences
+        in their attributes. Specifically, it logs changes in `check_tick`,
+        `reset_tick`, and the differences in the `blocked_apps` list.
+
+        Returns `True` if any changes were found, `False` otherwise.
+        """
+        any_changes: bool = False
+        if self.check_tick != new_check_tick:
+            logger.info(
+                "CHECK_TICK changed from %s to %s",
+                format_float(self.check_tick),
+                format_float(new_check_tick),
+            )
+            any_changes = True
+        if self.reset_tick != new_reset_tick:
+            logger.info(
+                "RESET_TICK changed from %s to %s",
+                format_float(self.reset_tick),
+                format_float(new_reset_tick),
+            )
+            any_changes = True
+        if added_apps := sorted(set(new_blocked_apps).difference(self.blocked_apps)):
+            logger.info("Added to blocked apps: %s", added_apps)
+            any_changes = True
+        if removed_apps := sorted(set(self.blocked_apps).difference(new_blocked_apps)):
+            logger.info("Removed from blocked apps: %s", removed_apps)
+            any_changes = True
+        return any_changes
+
+    def _log_init_info(self) -> None:
+        logger.info("App Blocker started")
+        logger.info("Default blocked apps file: %s", DEFAULT_BLOCKED_APPS_PATH)
+        logger.info("\tdefault_blocked_apps=%s", _load_blocked_apps(default=True))
+        logger.info("Blocked apps file: %s", BLOCKED_APPS_PATH)
+        logger.info("Logs file: %s", LOGS_FILE)
+
+    def _log_state_info(self) -> None:
+        logger.info("State:")
+        logger.info("\tcheck_tick=%s", format_float(self.check_tick))
+        logger.info("\treset_tick=%s", format_float(self.reset_tick))
+        logger.info("\tblocked_apps=%s", self.blocked_apps)
 
 
 def reset_blocked_apps() -> None:
@@ -87,36 +135,6 @@ def kill_blocked_apps() -> None:
 #############################
 #    "Private" functions    #
 #############################
-
-
-def _log_state_changes(last_state: State, new_state: State) -> None:
-    """
-    Logs the changes in state between the last and the new state.
-
-    This function compares two `State` objects and logs any differences
-    in their attributes. Specifically, it logs changes in `check_tick`,
-    `reset_tick`, and the differences in the `blocked_apps` list.
-    """
-    if last_state.check_tick != new_state.check_tick:
-        logger.info(
-            "CHECK_TICK changed from %s to %s",
-            format_float(last_state.check_tick),
-            format_float(new_state.check_tick),
-        )
-    if last_state.reset_tick != new_state.reset_tick:
-        logger.info(
-            "RESET_TICK changed from %s to %s",
-            format_float(last_state.reset_tick),
-            format_float(new_state.reset_tick),
-        )
-    if added_apps := sorted(
-        set(new_state.blocked_apps).difference(last_state.blocked_apps)
-    ):
-        logger.info("Added to blocked apps: %s", added_apps)
-    if removed_apps := sorted(
-        set(last_state.blocked_apps).difference(new_state.blocked_apps)
-    ):
-        logger.info("Removed from blocked apps: %s", removed_apps)
 
 
 def _load_blocked_apps(*, default: bool = False) -> list[str]:
@@ -176,11 +194,11 @@ def _is_in_blocked_apps(app: str, blocked_apps: list[str]) -> bool:
     app_substrings = app.split("-")
     for blocked_app in blocked_apps:
         if blocked_app == app:
-            logger.info("App %r: found exact match: %r", app, blocked_app)
+            logger.info("App %r: found exact match", app)
             return True
         for app_substring in app_substrings:
             if blocked_app == app_substring:
-                logger.info("App %r: found substring match: %r", app, blocked_app)
+                logger.info("App %r: found substring match (%r)", app, blocked_app)
                 return True
     return False
 

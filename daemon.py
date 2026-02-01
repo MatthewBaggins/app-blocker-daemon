@@ -23,7 +23,7 @@ def main() -> None:
     - Updates the application state at the end of each loop iteration.
     """
     running_flag = make_running_flag()
-    state = State.make(last_state=None)
+    state = State()
     last_blocked_apps_reset_time: float = 0.0
 
     while running_flag:
@@ -32,7 +32,7 @@ def main() -> None:
             last_blocked_apps_reset_time = now
         kill_blocked_apps()
         time.sleep(state.check_tick)
-        state = State.make(last_state=state)
+        state.update()
 
 
 if __name__ == "__main__":
