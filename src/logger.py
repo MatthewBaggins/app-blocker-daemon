@@ -28,6 +28,7 @@ def _get_logger() -> logging.Logger:
         )
     )
     logger.addHandler(handler)
+
     return logger
 
 

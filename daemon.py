@@ -22,8 +22,8 @@ def main() -> None:
     - Sleeps for a duration specified by the state's check interval.
     - Updates the application state at the end of each loop iteration.
     """
-    running_flag = make_running_flag()
     state = State()
+    running_flag = make_running_flag()
     last_blocked_apps_reset_time: float = 0.0
 
     while running_flag:

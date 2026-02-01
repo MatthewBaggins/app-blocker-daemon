@@ -145,7 +145,6 @@ def _load_blocked_apps(filetype: BlockedAppsFileType, /) -> list[str]:
     """
     # Always load default blocked apps first
     default_blocked_apps = _load_default_blocked_apps_with_fallback()
-
     match filetype:
         case "default":
             return default_blocked_apps
@@ -175,7 +174,6 @@ def _load_user_blocked_apps_with_fallback(default_blocked_apps: list[str]) -> li
             "blocked_apps.json not found; creating from default_blocked_apps.json"
         )
         return _write_inactive_to_blocked_apps_file(default_blocked_apps)
-
     # File exists: try to load it
     try:
         return _load_blocked_apps_from_file("user")
