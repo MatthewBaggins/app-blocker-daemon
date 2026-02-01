@@ -224,7 +224,7 @@ def _is_active_app(app: str) -> bool:
         try:
             proc_name = proc.info["name"]
             exe_name = proc.info["exe"].split("/")[-1] if proc.info["exe"] else ""
-
+            # Check if app is perfect match
             if app.lower() in [str(proc_name).lower(), str(exe_name).lower()]:
                 logger.info(
                     "Found exact match: %r is active (proc_name=%r, exe_name=%r)",
@@ -233,7 +233,6 @@ def _is_active_app(app: str) -> bool:
                     exe_name,
                 )
                 return True
-
             # Check if app is a substring (e.g., "signal" in "signal-desktop")
             if app.lower() in f"{proc_name}-{exe_name}".lower().strip().split("-"):
                 logger.info(
