@@ -8,7 +8,7 @@ def is_list_of_strings(x: object) -> typ.TypeGuard[list[str]]:
     return isinstance(x, list) and all(isinstance(el, str) for el in x)
 
 
-def load_json_list_of_strings(path: pathlib.Path | str) -> list[str]:
+def load_list_of_strings_from_json(path: pathlib.Path | str) -> list[str]:
     """Load a JSON file, asserting that it's list[str]."""
     with open(path, "r", encoding="utf-8") as f:
         loaded = json.load(f)

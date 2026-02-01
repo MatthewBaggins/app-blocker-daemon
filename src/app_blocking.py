@@ -16,7 +16,7 @@ from src.constants import (
     LOGS_FILE_PATH,
 )
 from src.logger import logger
-from src.utils import load_json_list_of_strings, format_float
+from src.utils import load_list_of_strings_from_json, format_float
 
 
 class State:
@@ -263,4 +263,4 @@ def _load_blocked_apps_from_file(mode: BlockedAppsFileType, /) -> list[str]:
             file_path = DEFAULT_BLOCKED_APPS_PATH
         case "user":
             file_path = BLOCKED_APPS_PATH
-    return sorted(app.lower() for app in load_json_list_of_strings(file_path))
+    return sorted(app.lower() for app in load_list_of_strings_from_json(file_path))
