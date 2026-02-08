@@ -9,7 +9,7 @@ commands:
   install              install the app
   uninstall            remove the app
   reinstall            remove and install the app
-  reset                restore blocked_apps.json to default_blocked_apps.json
+  reset                restore blocked_apps.txt to default_blocked_apps.txt
 
   start                start the app
   stop                 stop the app
@@ -41,23 +41,22 @@ install() {
   fi
 
   # Create default blocked apps file config if it doesn't exist
-  if [ ! -f default_blocked_apps.json ]; then
-  cat > default_blocked_apps.json << EOF
-[
-  "brave",
-  "discord",
-  "firefox",
-  "signal",
-  "slack",
-  "steam"
-]
+  if [ ! -f default_blocked_apps.txt ]; then
+  cat > default_blocked_apps.txt << EOF
+brave
+code
+discord
+firefox
+signal
+slack
+steam
 EOF
-  echo "Created default_blocked_apps.json"
+  echo "Created default_blocked_apps.txt"
   fi
 
   # Create blocked apps file config if it doesn't exist
-  if [ ! -f blocked_apps.json ]; then
-    cp default_blocked_apps.json blocked_apps.json && echo "Reset blocked_apps.json"
+  if [ ! -f blocked_apps.txt ]; then
+    cp default_blocked_apps.txt blocked_apps.txt && echo "Reset blocked_apps.txt"
   fi
 
   # Enable and start the service
@@ -89,7 +88,7 @@ case "$arg" in
   install) install ;;
   uninstall) uninstall ;;
   reinstall) uninstall && echo "" && install ;;
-  reset) cp default_blocked_apps.json blocked_apps.json && echo "Reset blocked_apps.json" ;;
+  reset) cp default_blocked_apps.txt blocked_apps.txt && echo "Reset blocked_apps.txt" ;;
   
   start) systemctl --user start app-blocker-daemon.service ;;
   stop) systemctl --user stop app-blocker-daemon.service ;;

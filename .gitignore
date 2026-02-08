@@ -2,8 +2,8 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
-default_blocked_apps.json
-blocked_apps.json
+default_blocked_apps.txt
+blocked_apps.txt
 logs
 *.log
 TODO

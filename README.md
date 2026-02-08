@@ -6,8 +6,8 @@ For a site-blocking Chromium/Brave extension, see [site-blocker](https://github.
 
 ## How it works
 
-- Every `CHECK_TICK` seconds (defined in `.env`), it reads `blocked_apps.json` and kills the apps that match the names listed in there. It also re-reads `.env` to update its values of `CHECK_TICK` and `RESET_TICK`.
-- Every `RESET_TICK` seconds (defined in `.env`), it resets `blocked_apps.json` to `default_blocked_apps.json`, *except* those apps listed in `default_blocked_apps.json` that are currently active.
+- Every `CHECK_TICK` seconds (defined in `.env`), it reads `blocked_apps.txt` and kills the apps that match the names listed in there. It also re-reads `.env` to update its values of `CHECK_TICK` and `RESET_TICK`.
+- Every `RESET_TICK` seconds (defined in `.env`), it resets `blocked_apps.txt` to `default_blocked_apps.txt`, *except* those apps listed in `default_blocked_apps.txt` that are currently active.
 - Detailed logs of the app's behavior can be found in `logs/daemon.log`.
 
 ## Install and Manage
@@ -19,7 +19,7 @@ The most important commands are:
 - `./manage.sh install` (it will make the app start on every subsquent boot, until uninstalled)
 - `./manage.sh uninstall`
 - `./manage.sh reinstall`
-- `./manage.sh reset` - reset `blocked_apps.json` to `default_blocked_apps.json` (except for those apps in `default_blocked_apps.json` that are currently running)
+- `./manage.sh reset` - reset `blocked_apps.txt` to `default_blocked_apps.txt` (except for those apps in `default_blocked_apps.txt` that are currently running)
 
 For more commands (perhaps somewhat helpful in debugging), see `./manage.sh help`.
 
@@ -49,7 +49,7 @@ Create a `.env` file in the project root with:
 
 ```bash
 CHECK_TICK=1 # the daemon loads the settings, kills apps that are being blocked, etc, every **second**
-RESET_TICK=300 # blocked_apps.json is reset to default_blocked_apps.json every 300 seconds = 5 minutes
+RESET_TICK=300 # blocked_apps.txt is reset to default_blocked_apps.txt every 300 seconds = 5 minutes
 ```
 
 Running `./manage.sh install` copies `.env.example` to `.env`.
@@ -58,17 +58,15 @@ Not strictly necessary (the daemon has hard-coded fallback defaults equal to the
 
 ### Blocked Apps
 
-Edit `blocked_apps.json` and `default_blocked_apps.json`:
+Edit `blocked_apps.txt` and `default_blocked_apps.txt`:
 
-```json
-[
-    "app_name", 
-    "another_app"
-]
+```txt
+app_name
+another_app
 ```
 
-`blocked_apps.json` is read every `CHECK_TICK` seconds. It is reset to `default_blocked_apps.json` (except the apps in the latter that are currently active) every `RESET_TICK` seconds.
+`blocked_apps.txt` is read every `CHECK_TICK` seconds. It is reset to `default_blocked_apps.txt` (except the apps in the latter that are currently active) every `RESET_TICK` seconds.
 
-Running `./manage.sh install` copies `default_blocked_apps.json` to `blocked_apps.json`. If `default_blocked_apps.json` happens not to exist, for whatever reason, it is created to a list hard-coded in `./manage.sh`.
+Running `./manage.sh install` copies `default_blocked_apps.txt` to `blocked_apps.txt`. If `default_blocked_apps.txt` happens not to exist, for whatever reason, it is created to a list hard-coded in `./manage.sh`.
 
 To find app process names: `ps aux | grep -i appname`

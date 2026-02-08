@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Standalone app blocker daemon.
-Reads blocked apps from blocked_apps.json and kills matching processes.
+Reads blocked apps from blocked_apps.txt and kills matching processes.
 """
 import time
 

@@ -3,8 +3,8 @@ import pathlib
 # Paths
 REPO_PATH = pathlib.Path(__file__).parent.parent
 
-DEFAULT_BLOCKED_APPS_PATH = REPO_PATH / "default_blocked_apps.json"
-BLOCKED_APPS_PATH = REPO_PATH / "blocked_apps.json"
+DEFAULT_BLOCKED_APPS_PATH = REPO_PATH / "default_blocked_apps.txt"
+BLOCKED_APPS_PATH = REPO_PATH / "blocked_apps.txt"
 LOGS_DIR_PATH = REPO_PATH / "logs"
 LOGS_FILE_PATH = LOGS_DIR_PATH / "daemon.log"
 DOTENV_FILE_PATH = REPO_PATH / ".env"

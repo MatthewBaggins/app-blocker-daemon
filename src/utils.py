@@ -1,21 +1,12 @@
-import json
 import pathlib
-import typing as typ
 
 
-def is_list_of_strings(x: object) -> typ.TypeGuard[list[str]]:
-    """Verify that `x` is list[str]."""
-    return isinstance(x, list) and all(isinstance(el, str) for el in x)
-
-
-def load_list_of_strings_from_json(path: pathlib.Path | str) -> list[str]:
-    """Load a JSON file, asserting that it's list[str]."""
+def load_list_of_strings_from_txt(path: pathlib.Path) -> list[str]:
+    """Load a list of strings from a text file, newline-separated."""
+    assert path.suffix == ".txt", f"{path=!r}; {path.suffix=!r}"
     with open(path, "r", encoding="utf-8") as f:
-        loaded = json.load(f)
-    assert is_list_of_strings(
-        loaded
-    ), f"{loaded=!r} from {path=!r} is not a list of strings."
-    return loaded
+        lines = [l.strip() for l in f.read().split("\n") if l.strip()]
+    return lines
 
 
 class Box[T]:
